@@ -4,9 +4,6 @@ from scipy.io import wavfile
 import matplotlib.pyplot as plt
 
 
-
-data = r'C:\Users\latta\GitHub\Human_Data_Analytics_Project_2023\data\ESC-50\1-137-A-32.wav'
-
 def segmentation(data, sample_rate=44100, segment=25, overlapping=10):
     #segment and overlapping are expressed in milliseconds
     if type(data)=='str':
@@ -150,4 +147,3 @@ def MFCC(audio, cepstral_num = 20,
 
     return np.asarray(feature_vectors)
 
-print(MFCC(data))
