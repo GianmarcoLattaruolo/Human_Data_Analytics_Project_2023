@@ -2,6 +2,8 @@ import numpy as np
 import librosa
 from scipy.io import wavfile
 import matplotlib.pyplot as plt
+from scipy.signal import stft,spectrogram
+from scipy.fft import fft,ifft
 
 
 def segmentation(data, sample_rate=44100, segment=25, overlapping=10):
@@ -40,9 +42,11 @@ def hamming_window(n,N):
 
 def DFT(frame): #discrete fourier transform
     N = len(frame)
-    S = np.zeros((1,N),dtype='complex')
-    for k in range(N):
-        S[0,k]=np.sum([frame[n]*hamming_window(n,N)*np.exp(-2*np.pi*k*n*1j/N) for n in range(N)])
+    #S = np.zeros((1,N),dtype='complex')
+    windowed_frame = [frame[n]*hamming_window(n,N) for n in range(N)]
+    S = fft(windowed_frame)
+    #for k in range(N):
+    #    S[0,k]=np.sum([frame[n]*hamming_window(n,N)*np.exp(-2*np.pi*k*n*1j/N) for n in range(N)])
     return S
 
 def DCT(vec):
@@ -63,7 +67,7 @@ def Delta(vec,M):
         delta = np.zeros((N,1))
         den = M*(M+1)*(2*M+1)/3
         for i in range(N):
-            delta[i]=np.sum([ m*(vec[M+i+m]-vec[M+i-m])   for m in range(1,M+1)])/den
+            delta[i]=np.sum([ m*(vec[M+i+m]-vec[M+i-m]) for m in range(1,M+1)])/den
 
         return delta
 
@@ -115,7 +119,7 @@ def MFCC(audio, cepstral_num = 20,
         #step 2: power spectrum
         power_spectrum = DFT(frame)
         periodogram = np.absolute(power_spectrum)**2/2
-        periodogram = periodogram[0,:(N+1)//2]
+        periodogram = periodogram[:(N+1)//2]
 
         #step 3: filterbank
         energy = np.dot(filters,periodogram.reshape((N+1)//2,1))

@@ -52,7 +52,7 @@ if __name__=='__main__':
 
 
 
-def load_metadata(main_dir, statistics = False, audio_listen = False, ESC50=True, ESC10=True, ESC_US=False):
+def load_metadata(main_dir, heads = True, statistics = False, audio_listen = False, ESC50=True, ESC10=True, ESC_US=False):
     dir_path = os.path.join(main_dir, 'data', 'ESC-50')
     audio_files = [os.path.join(dir_path, i) for i in os.listdir(dir_path)]
 
@@ -69,11 +69,10 @@ def load_metadata(main_dir, statistics = False, audio_listen = False, ESC50=True
         df_ESC10 = df_ESC50[df_ESC50.esc10].drop('esc10', axis=1)   
 
 
-    if statistics:
+    if heads:
         display(df_ESC50.head())
-        print('Classes in the full dataset \n',Counter(df_ESC50.category)) #classes are perfectly balanced
-        print('The ESC-10 and ESC-50 datasets have been prearranged into 5 uniformly sized folds so that clips'+
-            'extracted from the same original source recording are always contained in a single fold \n',Counter(df_ESC50.fold))
+        print('Classes in the full dataset  are perfectly balanced\n',Counter(df_ESC50.category)) #classes are perfectly balanced
+    
         # 'target' is a number representing the audio type 
         #category of the reduced dataset ESC-10
     
@@ -81,6 +80,7 @@ def load_metadata(main_dir, statistics = False, audio_listen = False, ESC50=True
         classes_esc10 = list(set(df_ESC10.category))
         print('Classes in ESC10 \n',classes_esc10)
 
+    if statistics:
         #auxiliary objects
         sample_rates = set()
         clip_length = set()
@@ -112,8 +112,22 @@ def load_metadata(main_dir, statistics = False, audio_listen = False, ESC50=True
             display(IPython.display.Audio(data = data, rate=samplerate)  )
 
     if ESC_US:
-        file_path = os.path.join(main_dir, 'data', 'meta', 'ESC-US.csv')
-        df_ESC_US = pd.read_csv(file_path)
+        file_path = os.path.join(main_dir, 'data', 'meta', 'ESC-US.csv') #this csv file is useless since has no reference to the files
+        ESC_US_paths = os.path.join(main_dir,'data','ESC-US')
+        tot = len(os.listdir(ESC_US_paths))
+        df_ESC_US = pd.DataFrame(columns=['filename','full_path'])
+
+        for i,folder in enumerate(os.listdir(ESC_US_paths)):
+            
+            print(f'Loading the {i+1}/{tot} folder of unlabeled data ')
+            folder_path = os.path.join(ESC_US_paths,folder)
+            files = os.listdir(folder_path)
+            full_path_files = [os.path.join(folder_path,f) for f in files]
+            d = pd.DataFrame((files,full_path_files), index = ['filename','full_path']).transpose()
+            df_ESC_US = pd.concat([df_ESC_US,d])
+        if heads:
+            print(f'We have {np.max(np.shape(df_ESC_US))} unlabeled audios.')
+            display(df_ESC_US.head())
 
     if ESC50 and not ESC10 and not ESC_US:
         return df_ESC50
