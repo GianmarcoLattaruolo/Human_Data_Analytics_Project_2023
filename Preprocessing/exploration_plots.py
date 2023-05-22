@@ -1,5 +1,4 @@
 #libraries
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import librosa
@@ -11,8 +10,8 @@ import IPython.display
 import random
 import os
 from scipy import signal
-from scipy.fft import fft,ifft
-from scipy.signal import stft,spectrogram
+from scipy.fft import fft,ifft,fftfreq, fftshift
+from scipy.signal import stft,spectrogram,periodogram
 
 def one_random_audio(main_dir):
     dir_path = os.path.join(main_dir, 'data', 'ESC-50')
@@ -41,48 +40,6 @@ def one_random_audio(main_dir):
     return y, sr
 
 
-def power_spectrum_plot(y,sr):
-        
-    fs = 1/sr
-    n = len(y)
-    freq_y, pow_spect_y = signal.periodogram(y,fs=fs)
-    max_index = freq_y[pow_spect_y==np.max(pow_spect_y[1000:])]
-    focus = 1e-6
-    #it's better to make a logarithmic plot
-    log_pow_spec = np.log(pow_spect_y)
-
-
-    plt.subplots(4, 1, figsize=(9, 10))
-    plt.tight_layout(pad=4)
-
-    plt.subplot(4,1,1)
-    plt.plot(freq_y,pow_spect_y)
-    plt.title("Clip's Periodogram")
-    plt.ylabel('Power Spectrum')
-    plt.xlabel('frequency [1/second]')
-    #it's difficult to carry out a significative graph
-
-    plt.subplot(4,1,2)
-    plt.plot(freq_y, log_pow_spec)
-    plt.title('Logarithmic Periodogram')
-    plt.ylabel('Log-scale')
-    plt.xlabel('frequency [1/second]')
-
-    plt.subplot(4,1,3)
-    plt.plot(freq_y,pow_spect_y)
-    plt.xlim([max_index-focus,max_index+focus]) #da modificare per adattarsi ad ogni audio
-    plt.title("focus on Clip's periodogram")
-    plt.ylabel('Power spectrum')
-    plt.xlabel('frequency [1/second]')
-
-    plt.subplot(4,1,4)
-    plt.plot(freq_y,log_pow_spec)
-    plt.xlim([max_index-focus,max_index+focus])
-    plt.title("focus on log Clip's periodogram")
-    plt.ylabel('log_scale')
-    plt.xlabel('frequency [1/second]')
-
-
 def plot_clip_overview(df, sample_rate=44100, segment=25, overlapping=10, column = 5):
 
     segment_samples = round(sample_rate * segment / 1000)  # Calculate the number of samples per segment
@@ -106,22 +63,160 @@ def plot_clip_overview(df, sample_rate=44100, segment=25, overlapping=10, column
             plt.title(audio_type)
             librosa.display.specshow(S_db)
 
-def spect_mfcc_overview(audio,segment=25, overlapping=10):
-    f,t,Zxx = stft(y,fs = fs, window='hann',nperseg=1000,noverlap=250)
-    print(type(f))
-    print(type(t))
-    print(type(Zxx))
+def Spectral_Analysis(audio,
+                      sample_rate = 44100,
+                      segment = 20,
+                      n_fft = None, #padd the frames with zeros before DFT
+                      overlapping=10,
+                      cepstral_num = 40, #number of mel frequencies cepstral coefficients
+                      N_filters = 50, #number of mel filters in frequency domain
+                      plot = False,
+                      verbose = False,
+                      STFT_decibel = False,
+                      Mel_spectrogram_decibel = False,
+                      MFCC = True):
+    if n_fft==None:
+        n_fft = segment
+    nperseg = round(sample_rate * segment / 1000)  # Calculate the number of samples per segment win_length = nperseg
+    noverlap = round(sample_rate * overlapping / 1000)
+    n_fft = round(sample_rate * n_fft /1000)
+    hop_length = nperseg-noverlap
 
-    print(np.shape(f))
-    print(np.shape(t))
-    print(np.shape(Zxx))
+    # SCIPY
 
-    display(f[:5])
-    display(t[:5])
-    display(Zxx[:3,:3])
+    y_hat = fft(audio)
+    freq_scipy_periodogram, y_norm = periodogram(audio)
+    freq_scipy, time_scipy, stft_scipy = stft(audio,
+                                    fs = sample_rate, 
+                                    window='hann', 
+                                    nperseg=nperseg, 
+                                    noverlap=noverlap, 
+                                    nfft=n_fft)
+    f,t , spec_y = spectrogram(audio, fs = sample_rate, nperseg=nperseg, noverlap=noverlap)
+    
+    #LIBROSA
 
-    S_db = librosa.amplitude_to_db(np.abs(Zxx), ref=np.min)
-    plt.imshow(S_db)
-    plt.colorbar()
-    plt.show()
-    pass
+    frequencies = librosa.fft_frequencies(sr = sample_rate,n_fft=audio.shape[0]) #non so cosa sia
+    stft_librosa = librosa.stft(audio,
+                                  hop_length = hop_length, 
+                                  win_length = nperseg, 
+                                  n_fft = n_fft)
+    sample_librosa = librosa.frames_to_samples([i for i in range(stft_librosa.shape[1])],
+                                             hop_length=noverlap, 
+                                             n_fft=n_fft) # returns time (in samples) of each given frame number
+    time_librosa = librosa.frames_to_time([i for i in range(stft_librosa.shape[1])],
+                                          hop_length = hop_length,
+                                          sr = sample_rate,
+                                           n_fft = n_fft )
+    freq_librosa = librosa.fft_frequencies(sr=sample_rate, n_fft=n_fft)
+    S_db = librosa.amplitude_to_db(np.abs(stft_librosa), ref=np.max)
+
+    #librosa other types of spectral data
+
+    mel_y = librosa.feature.melspectrogram(y=audio, sr=sample_rate, n_fft = n_fft, hop_length = hop_length, win_length=nperseg) 
+    M_db = librosa.power_to_db(mel_y, ref=np.max)
+    
+    #mel frequency cepstral coefficients
+    mfcc_y = librosa.feature.mfcc( y=audio, 
+                                sr=sample_rate, 
+                                n_mfcc=cepstral_num,
+                                n_fft = n_fft,  
+                                hop_length=hop_length, 
+                                htk=True, 
+                                fmin = 40,
+                                n_mels = N_filters)
+    
+    
+    if verbose:
+
+        print(f'Frame length is {nperseg}')
+        print(f'Overlap length is {noverlap}')
+        print(f'The length of the windowed signal after padding with zeros (frames) is {n_fft}. ')
+        print('\n')
+        print(f'Scipy STFT shape {stft_scipy.shape}')
+        print(f'Scipy; length of frequencies vector {freq_scipy.shape}')
+        print(f'Scipy; length of time vector {time_scipy.shape}')
+        print('\n')
+        print(f'librosa STFT shape {stft_librosa.shape}')
+        print(f'Librosa frames_to_time has shape {time_librosa.shape}, (the time vector for STFT)')
+        print(f'Is it equal to the time vector of Scipy? {(time_librosa-0.01==time_scipy).all()}')
+        print(f'Librosa fft_frequencies has shape {freq_librosa.shape} (compute the frequencies given the sample_rate and the windowed length)')
+        print(f'Is it equal to Scipy frequencies? {(freq_librosa==freq_scipy).all()}')
+        print('\n')
+        print(f'The STFT converted in decibell domain ha shape {S_db.shape}')
+        print(f'Librosa Mel spectrogram of the audio has shape {mel_y.shape} ') #different da feature.mfcc
+        print(f'Librosa MFCC features has shape {mfcc_y.shape}')
+        print('\n')
+
+    if plot:
+
+        plt.subplots(10, 1, figsize=(9, 30))
+        plt.tight_layout(pad=3)
+
+        plt.subplot(10,1,1)
+        plt.plot(np.abs(y_hat))
+        plt.title(f'Scipy norm of FFT: Input {audio.shape} > Output {y_hat.shape}')
+        plt.xlabel('Frequency [Hz]')
+
+        plt.subplot(10,1,2)
+        plt.plot(freq_scipy_periodogram , y_norm)
+        plt.xlabel('Frequency [Hz]')
+        plt.ylabel('Linear spectrum [V RMS]')
+        plt.title(f'Scipy Periodogram: Input {audio.shape} > Output {y_norm.shape}')
+
+        plt.subplot(10,1,3)
+        plt.pcolormesh(time_scipy, freq_scipy, np.abs(stft_scipy),shading='gouraud')
+        plt.ylabel('Frequency [Hz]')
+        plt.xlabel('Time [sec]')
+        plt.title(f'Scipy STFT: Input {audio.shape, nperseg, noverlap} > Output {stft_scipy.shape}')
+
+        plt.subplot(10,1,4)
+        plt.pcolormesh(t, f, spec_y)
+        plt.ylabel('Frequency [Hz]')
+        plt.xlabel('Time [sec]')
+        plt.title(f'Scipy Spectrogram: Input {audio.shape, nperseg, noverlap} > Output {spec_y.shape}')
+
+        plt.subplot(10,1,5)
+        plt.pcolormesh(time_librosa, freq_librosa, np.abs(stft_librosa))
+        plt.title(f'Librosa STFT: Input {audio.shape, hop_length, nperseg} > Output {stft_librosa.shape}')
+        plt.ylabel('Frequency [Hz]')
+        plt.xlabel('Time [sec]')
+
+        plt.subplot(10,1,6)
+        librosa.display.specshow(S_db, x_axis='time', y_axis='linear')
+        plt.title(f'Librosa STFT + amplitude conversion into decibel domain. {S_db.shape} ')
+        plt.colorbar(format="%+2.f dB")
+
+        plt.subplot(10,1,7)
+        librosa.display.specshow(S_db, x_axis='time', y_axis='log')
+        plt.title(f'Same as before but using a logarithmic frequency axis')
+        plt.colorbar(format="%+2.f dB")
+
+        plt.subplot(10,1,8)
+        plt.imshow(mel_y)
+        plt.colorbar(format="%+2.f dB")
+        plt.title(f'Librosa Mel spectrogram: Input {audio.shape, sample_rate, nperseg, hop_length} > Output {mel_y.shape}')
+
+        plt.subplot(10,1,9)
+        librosa.display.specshow(M_db, y_axis='mel', x_axis='time')
+        plt.title(f'Mel spectrogram + amplitude to decibel conversion')
+        plt.colorbar(format="%+2.f dB")
+
+        plt.subplot(10,1,10)
+        librosa.display.specshow(mfcc_y, x_axis='time')
+        plt.title(f'Mel Frequency Cepstral Coefficients {cepstral_num}')
+        plt.colorbar(format="%+2.f dB")
+
+    if MFCC:
+        if Mel_spectrogram_decibel:
+            if STFT_decibel:
+                return mfcc_y, M_db, S_db
+            else:
+                return mfcc_y, M_db
+        else:
+            if STFT_decibel:
+                return mfcc_y, S_db
+            else:
+                return mfcc_y
+    else:
+        return None
