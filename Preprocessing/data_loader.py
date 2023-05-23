@@ -140,4 +140,42 @@ def load_metadata(main_dir, heads = True, statistics = False, audio_listen = Fal
     elif ESC10 and ESC50 and ESC_US:
         return df_ESC10,df_ESC50, df_ESC_US
     
+''' funzione da finire di sistemare ma inutile
+def make_subfolders(main_dir,name_df, df):
+    if name_df=='ESC50':
+        data_dir = os.path.join(main_dir,'data','ESC-50-depth')
+        if not os.path.isdir(data_dir):
+            os.mkdir(data_dir)
+
+        for category_folder in list(set(df_ESC50.category)):
+            if not os.path.isdir(os.path.join(data_dir,category_folder)):
+                os.mkdir(os.path.join(data_dir,category_folder))
+            for old_path in df_ESC50.full_path[df_ESC50.category == category_folder]:
+                new_path = os.path.join(data_dir, category_folder, old_path.split('\\')[-1])
+                if not os.path.isfile(new_path):
+                    shutil.copy(old_path, new_path)
+                    
+    elif name_df == 'ESC10':
+        data_dir = os.path.join(main_dir,'data','ESC-10-depth')
+        if not os.path.isdir(data_dir):
+            os.mkdir(data_dir)
+
+        for category_folder in list(set(df_ESC10.category)):
+            if not os.path.isdir(os.path.join(data_dir,category_folder)):
+                os.mkdir(os.path.join(data_dir,category_folder))
+            for old_path in df_ESC10.full_path[df_ESC10.category == category_folder]:
+                new_path = os.path.join(data_dir, category_folder, old_path.split('\\')[-1])
+                if not os.path.isfile(new_path):
+                    shutil.copy(old_path, new_path)
+
+    elif name_df == 'ESC_US':
+        data_dir = os.path.join(main_dir,'data','ESC-US-depth')
+        if not os.path.isdir(data_dir):
+            os.mkdir(data_dir)
+
+        for old_path in df_ESC_US.full_path():
+'''
+
+
+
 
