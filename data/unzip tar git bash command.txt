@@ -1,0 +1,3 @@
+primo dataset da 10000 https://dataverse.harvard.edu/file.xhtml?persistentId=doi:10.7910/DVN/YDEPUT/YE0CVE&version=2.0  
+
+tar -xvzf ESC-US-01.tar.gz -C C:/Users/latta/GitHub/Human_Data_Analytics_Project_2023/data

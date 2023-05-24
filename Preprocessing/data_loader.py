@@ -12,44 +12,6 @@ import numpy as np
 import IPython.display
 import random
 
-def download_dataset(name):
-    if not os.path.exists(f'./data'):
-        os.mkdir('data')
-    os.chdir('./data')
-    """Download the dataset into current working directory.
-    The labeled dataset is ESC-50, the unlabeld are ESC-US-00,ESC-US-01, ... , ESC-US-25 
-    but I'm not able to download them automatically from https://dataverse.harvard.edu/dataverse/karol-piczak?q=&types=files&sort=dateSort&order=desc&page=1"""
-
-    if name=='ESC-50' and not os.path.exists(f'./{name}'):
-
-        if not os.path.exists(f'./{name}-master.zip') and not os.path.exists(f'./{name}-master'):
-            urllib.request.urlretrieve(f'https://github.com/karoldvl/{name}/archive/master.zip', f'{name}-master.zip')
-
-        if not os.path.exists(f'./{name}-master'):
-            with zipfile.ZipFile(f'{name}-master.zip','r') as package:
-                package.extractall(f'{name}-master')
-
-        os.remove(f'{name}-master.zip') 
-        original = f'./{name}-master/{name}-master/audio'
-        target = f'./{name}'
-        shutil.move(original,target)
-        original = f'./{name}-master/{name}-master/meta'
-        target = f'./meta'
-        shutil.move(original,target)
-
-    if os.path.exists(f'./{name}-master'):
-        shutil.rmtree(f'./{name}-master')
-
-    else:
-        print('donwload it from https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/YDEPUT&version=2.0')
-        pass 
-    os.chdir('../')
-
-def main():
-    download_dataset('ESC-50')
-if __name__=='__main__':
-    main() # Call main() if this module is run, but not when imported.
-
 
 
 def load_metadata(main_dir, heads = True, statistics = False, audio_listen = False, ESC50=True, ESC10=True, ESC_US=False):
@@ -140,42 +102,80 @@ def load_metadata(main_dir, heads = True, statistics = False, audio_listen = Fal
     elif ESC10 and ESC50 and ESC_US:
         return df_ESC10,df_ESC50, df_ESC_US
     
-''' funzione da finire di sistemare ma inutile
-def make_subfolders(main_dir,name_df, df):
-    if name_df=='ESC50':
-        data_dir = os.path.join(main_dir,'data','ESC-50-depth')
-        if not os.path.isdir(data_dir):
-            os.mkdir(data_dir)
 
-        for category_folder in list(set(df_ESC50.category)):
+def make_subfolders(main_dir, df):
+    if 'category' in df.columns:
+        if len(set(df.category))==50:
+            data_dir = os.path.join(main_dir,'data','ESC-50-depth')
+            if not os.path.isdir(data_dir):
+                os.mkdir(data_dir)
+        else:
+            data_dir = os.path.join(main_dir,'data','ESC-10-depth')
+            if not os.path.isdir(data_dir):
+                os.mkdir(data_dir)
+
+        for category_folder in list(set(df.category)):
             if not os.path.isdir(os.path.join(data_dir,category_folder)):
                 os.mkdir(os.path.join(data_dir,category_folder))
-            for old_path in df_ESC50.full_path[df_ESC50.category == category_folder]:
+            for old_path in df.full_path[df.category == category_folder]:
                 new_path = os.path.join(data_dir, category_folder, old_path.split('\\')[-1])
                 if not os.path.isfile(new_path):
                     shutil.copy(old_path, new_path)
-                    
-    elif name_df == 'ESC10':
-        data_dir = os.path.join(main_dir,'data','ESC-10-depth')
-        if not os.path.isdir(data_dir):
-            os.mkdir(data_dir)
-
-        for category_folder in list(set(df_ESC10.category)):
-            if not os.path.isdir(os.path.join(data_dir,category_folder)):
-                os.mkdir(os.path.join(data_dir,category_folder))
-            for old_path in df_ESC10.full_path[df_ESC10.category == category_folder]:
-                new_path = os.path.join(data_dir, category_folder, old_path.split('\\')[-1])
-                if not os.path.isfile(new_path):
-                    shutil.copy(old_path, new_path)
-
-    elif name_df == 'ESC_US':
+                        
+    else:
         data_dir = os.path.join(main_dir,'data','ESC-US-depth')
         if not os.path.isdir(data_dir):
             os.mkdir(data_dir)
 
-        for old_path in df_ESC_US.full_path():
-'''
+        for old_path in df.full_path():
+            new_path = os.path.join(data_dir,'ESC-US',old_path.split('\\')[-1])
+            shutil.copy(old_path, new_path)
+
+
+def download_dataset(name,make_subfold = False):
+    if not os.path.exists(f'./data'):
+        os.mkdir('data')
+    os.chdir('./data')
+    """Download the dataset into current working directory.
+    The labeled dataset is ESC-50, the unlabeld are ESC-US-00,ESC-US-01, ... , ESC-US-25 
+    but I'm not able to download them automatically from https://dataverse.harvard.edu/dataverse/karol-piczak?q=&types=files&sort=dateSort&order=desc&page=1"""
+
+    if name=='ESC-50' and not os.path.exists(f'./{name}'):
+
+        if not os.path.exists(f'./{name}-master.zip') and not os.path.exists(f'./{name}-master'):
+            urllib.request.urlretrieve(f'https://github.com/karoldvl/{name}/archive/master.zip', f'{name}-master.zip')
+
+        if not os.path.exists(f'./{name}-master'):
+            with zipfile.ZipFile(f'{name}-master.zip','r') as package:
+                package.extractall(f'{name}-master')
+
+        os.remove(f'{name}-master.zip') 
+        original = f'./{name}-master/{name}-master/audio'
+        target = f'./{name}'
+        shutil.move(original,target)
+        original = f'./{name}-master/{name}-master/meta'
+        target = f'./meta'
+        shutil.move(original,target)
+
+    if os.path.exists(f'./{name}-master'):
+        shutil.rmtree(f'./{name}-master')
+
+    else:
+        print('donwload it from https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/YDEPUT&version=2.0')
+        pass 
+    os.chdir('../')
+
+    if make_subfold:
+        main_dir = os.getcwd()
+        print(f'The main dir is {main_dir}')
+        print('Loading the dataframes')
+        df_ESC10, df_ESC50 = load_metadata(main_dir, heads = False)
+        make_subfolders(main_dir, df_ESC10)
+        make_subfolders(main_dir, df_ESC50)
 
 
 
-
+def main():
+    download_dataset('ESC-50')
+if __name__=='__main__':
+    main() # Call main() if this module is run, but not when imported.
