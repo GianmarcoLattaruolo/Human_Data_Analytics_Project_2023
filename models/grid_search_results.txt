@@ -1,0 +1,31 @@
+
+LogisticRegression
+The grid search for the model LogisticRegression requires 169.18 minutes.
+Best params for model LogisticRegression are:{'Classifier__C': 0.1, 'Classifier__fit_intercept': True, 'MFCC__kw_args': {'mfcc': 30, 'n': 40}}
+LogisticRegression Accuracy on ESC10 training set	: 1.0
+LogisticRegression Accuracy on ESC10 test set	: 0.65
+SVC
+The grid search for the model SVC requires 145.56 minutes.
+Best params for model SVC are:{'Classifier__C': 10, 'Classifier__kernel': 'rbf', 'MFCC__kw_args': {'mfcc': 40, 'n': 80}}
+SVC Accuracy on ESC10 training set	: 1.0
+SVC Accuracy on ESC10 test set	: 0.67
+DecisionTreeClassifier
+The grid search for the model DecisionTreeClassifier requires 340.09 minutes.
+Best params for model DecisionTreeClassifier are:{'Classifier__max_depth': 10, 'Classifier__min_samples_leaf': 1, 'Classifier__min_samples_split': 20, 'MFCC__kw_args': {'mfcc': 20, 'n': 160}}
+DecisionTreeClassifier Accuracy on ESC10 training set	: 0.8233333333333334
+DecisionTreeClassifier Accuracy on ESC10 test set	: 0.38
+RandomForestClassifier
+The grid search for the model RandomForestClassifier requires 178.49 minutes.
+Best params for model RandomForestClassifier are:{'Classifier__criterion': 'gini', 'Classifier__max_depth': None, 'Classifier__min_samples_leaf': 2, 'Classifier__n_estimators': 150, 'MFCC__kw_args': {'mfcc': 20, 'n': 160}}
+RandomForestClassifier Accuracy on ESC10 training set	: 1.0
+RandomForestClassifier Accuracy on ESC10 test set	: 0.66
+KNeighborsClassifier
+The grid search for the model KNeighborsClassifier requires 101.66 minutes.
+Best params for model KNeighborsClassifier are:{'Classifier__n_neighbors': 8, 'Classifier__p': 1, 'Classifier__weights': 'distance', 'MFCC__kw_args': {'mfcc': 10, 'n': 120}}
+KNeighborsClassifier Accuracy on ESC10 training set	: 1.0
+KNeighborsClassifier Accuracy on ESC10 test set	: 0.65
+SVC
+The grid search for the model SVC requires 624.1 minutes.
+Best params for model SVC are:{'Classifier__C': 1, 'Classifier__degree': 2, 'Classifier__gamma': 1, 'Classifier__kernel': 'poly', 'MFCC__kw_args': {'mfcc': 30, 'n': 40}}
+SVC Accuracy on ESC10 training set	: 1.0
+SVC Accuracy on ESC10 test set	: 0.63
