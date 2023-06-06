@@ -3,3 +3,5 @@
 Vision_Notebook.ipynb
 **/data/ESC-US
 **/info_files
+**Models/__pycache__/
+**Preprocessing/__pycache__/
