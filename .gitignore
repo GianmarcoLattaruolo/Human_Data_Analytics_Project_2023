@@ -5,3 +5,7 @@ Vision_Notebook.ipynb
 **/info_files
 **Models/__pycache__/
 **Preprocessing/__pycache__/
+AE/cartoonset10k.tgz
+AE/cartoonset100k.tgz
+**AE/cartoonset100k
+
