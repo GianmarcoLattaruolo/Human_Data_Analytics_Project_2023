@@ -115,17 +115,19 @@ def Spectral_Analysis(audio,
 
     mel_y = librosa.feature.melspectrogram(y=audio, sr=sample_rate, n_fft = n_fft, hop_length = hop_length, win_length=nperseg) 
     M_db = librosa.power_to_db(mel_y, ref=np.max)
+     
+    #Per-channel energy normalization (PCEN)
+    S_db_pcen = librosa.pcen(stft_librosa*(2**31), max_size=5) 
     
     #mel frequency cepstral coefficients
-    mfcc_y = librosa.feature.mfcc( y=audio, 
-                                sr=sample_rate, 
-                                n_mfcc=cepstral_num,
-                                n_fft = n_fft,  
-                                hop_length=hop_length, 
-                                htk=True, 
-                                fmin = 40,
-                                n_mels = N_filters)
-    
+    mfcc_y = librosa.feature.mfcc(  y=audio, 
+                                    sr=sample_rate, 
+                                    n_mfcc=cepstral_num,
+                                    n_fft = n_fft,  
+                                    hop_length=hop_length, 
+                                    htk=True, 
+                                    fmin = 40,
+                                    n_mels = N_filters)
     
     if verbose:
 
@@ -147,66 +149,74 @@ def Spectral_Analysis(audio,
         print(f'Librosa Mel spectrogram of the audio has shape {mel_y.shape} ') #different da feature.mfcc
         print(f'Librosa MFCC features has shape {mfcc_y.shape}')
         print('\n')
+        print(f'Librosa per-channel energy normalization (PCEN) has shape f{S_db_pcen.shape}')
+        print('\n')
 
     if plot:
 
-        plt.subplots(10, 1, figsize=(9, 30))
+        plt.subplots(11, 1, figsize=(7, 27))
         plt.tight_layout(pad=3)
 
-        plt.subplot(10,1,1)
+        plt.subplot(11,1,1)
         plt.plot(np.abs(y_hat))
         plt.title(f'Scipy norm of FFT: Input {audio.shape} > Output {y_hat.shape}')
         plt.xlabel('Frequency [Hz]')
 
-        plt.subplot(10,1,2)
+        plt.subplot(11,1,2)
         plt.plot(freq_scipy_periodogram , y_norm)
         plt.xlabel('Frequency [Hz]')
         plt.ylabel('Linear spectrum [V RMS]')
         plt.title(f'Scipy Periodogram: Input {audio.shape} > Output {y_norm.shape}')
 
-        plt.subplot(10,1,3)
+        plt.subplot(11,1,3)
         plt.pcolormesh(time_scipy, freq_scipy, np.abs(stft_scipy),shading='gouraud')
         plt.ylabel('Frequency [Hz]')
         plt.xlabel('Time [sec]')
         plt.title(f'Scipy STFT: Input {audio.shape, nperseg, noverlap} > Output {stft_scipy.shape}')
 
-        plt.subplot(10,1,4)
+        plt.subplot(11,1,4)
         plt.pcolormesh(t, f, spec_y)
         plt.ylabel('Frequency [Hz]')
         plt.xlabel('Time [sec]')
         plt.title(f'Scipy Spectrogram: Input {audio.shape, nperseg, noverlap} > Output {spec_y.shape}')
 
-        plt.subplot(10,1,5)
+        plt.subplot(11,1,5)
         plt.pcolormesh(time_librosa, freq_librosa, np.abs(stft_librosa))
         plt.title(f'Librosa STFT: Input {audio.shape, hop_length, nperseg} > Output {stft_librosa.shape}')
         plt.ylabel('Frequency [Hz]')
         plt.xlabel('Time [sec]')
 
-        plt.subplot(10,1,6)
+        plt.subplot(11,1,6)
         librosa.display.specshow(S_db, x_axis='time', y_axis='linear')
         plt.title(f'Librosa STFT + amplitude conversion into decibel domain. {S_db.shape} ')
         plt.colorbar(format="%+2.f dB")
 
-        plt.subplot(10,1,7)
+        plt.subplot(11,1,7)
         librosa.display.specshow(S_db, x_axis='time', y_axis='log')
         plt.title(f'Same as before but using a logarithmic frequency axis')
         plt.colorbar(format="%+2.f dB")
 
-        plt.subplot(10,1,8)
+        plt.subplot(11,1,8)
         plt.imshow(mel_y)
         plt.colorbar(format="%+2.f dB")
         plt.title(f'Librosa Mel spectrogram: Input {audio.shape, sample_rate, nperseg, hop_length} > Output {mel_y.shape}')
 
-        plt.subplot(10,1,9)
+        plt.subplot(11,1,9)
         librosa.display.specshow(M_db, y_axis='mel', x_axis='time')
         plt.title(f'Mel spectrogram + amplitude to decibel conversion')
         plt.colorbar(format="%+2.f dB")
 
-        plt.subplot(10,1,10)
+        plt.subplot(11,1,10)
         librosa.display.specshow(mfcc_y, x_axis='time')
         plt.title(f'Mel Frequency Cepstral Coefficients {cepstral_num}')
         plt.colorbar(format="%+2.f dB")
 
+        plt.subplot(11,1,11)
+        librosa.display.specshow(S_db_pcen)
+        plt.title(f'Librosa per-channel energy normalization (PCEN)')
+        plt.colorbar(format="%+2.f dB")
+
+# decide what return if needed
     if MFCC:
         if Mel_spectrogram_decibel:
             if STFT_decibel:
@@ -220,3 +230,6 @@ def Spectral_Analysis(audio,
                 return mfcc_y
     else:
         return None
+    
+
+    
