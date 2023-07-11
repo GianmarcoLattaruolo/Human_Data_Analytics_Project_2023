@@ -10,4 +10,4 @@ class ModelSaveCallback(tf.keras.callbacks.Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         save_model(self.model, self.file_name)
-        print("Epoch {} - Model saved in {}".format(epoch, self.file_name))
+        print(f"Epoch {epoch} - Model saved in {self.file_name}")

@@ -125,6 +125,7 @@ def plot_history(history):
 
 
 def visualize_the_weights(model, layer_name = None, layer_number = None, n_filters = 16, verbose = 1):
+
     #extract the weights of the layer
     if layer_name is None:
         number_of_layers = len(model.get_weights())      
@@ -158,3 +159,14 @@ def visualize_the_weights(model, layer_name = None, layer_number = None, n_filte
         return w0
     else:
         return None
+    
+
+def plot_latent_space(encoder, test, y_test):
+    # display a 2D plot of the digit classes in the latent space
+    z_mean, _, _ = encoder.predict(test)
+    plt.figure(figsize=(12, 10))
+    plt.scatter(z_mean[:, 0], z_mean[:, 1], c=y_test, cmap='tab10')
+    plt.colorbar()
+    plt.xlabel("z[0]")
+    plt.ylabel("z[1]")
+    plt.show()

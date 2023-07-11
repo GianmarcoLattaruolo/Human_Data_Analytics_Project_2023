@@ -621,6 +621,10 @@ def create_dataset_2(subfolder_path, # folder of the audio data we want to impor
     if labels is not None:
         return train, val, test, label_names
     else:
+        # Duplicate data for the autoencoder (input = output)
+        train = train.map(lambda x: (x, x))
+        val = val.map(lambda x: (x, x))
+        test = test.map(lambda x: (x, x))
         return train, val, test
 
 
@@ -726,6 +730,6 @@ def compile_fit_evaluate(data_frame, model, train, val, test, label_names=None,
         
     else:
         return model, history
-
+    
 
 

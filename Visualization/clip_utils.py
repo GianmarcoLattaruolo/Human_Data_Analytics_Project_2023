@@ -152,5 +152,235 @@ def MFCC(audio, cepstral_num = 20,
     return np.asarray(feature_vectors)
 
 
+# CODE TO CONVERT THE OGG FILES. NO MORE REQUIRED
 
+#FFMPEG WAY
+
+def is_folder_empty(folder_path):
+    # INPUT: str of the folder path
+    # OUTPUT: TRUE / FALSE if the folder is empty 
+    return len(os.listdir(folder_path)) == 0
+
+if '01_conv' not in os.listdir(os.path.join(main_dir,'data','ESC-US')):
+    os.mkdir(os.path.join(main_dir,'data','ESC-US','01_conv'))
+
+path_input = os.path.join(main_dir,'data','ESC-US','01')
+path_output = os.path.join(main_dir,'data','ESC-US','01_conv')
+
+# Get a list of all files and directories in the specified directory
+files_in = os.listdir(path_input)
+files_out = os.listdir(path_output)
+files_check = [file[:-3] + "wav" for file in files_in if file[:-3] + "wav" not in files_out]
+
+def convert_ogg_to_wav(input_file, output_file):
+    # INPUT: input_file = str path of the input file .ogg we want to convert, output_file = path of the output file .wav we want ot create
+    # For this function to work you need the ffmpeg program installed on your computer
+    command = ['ffmpeg', '-i', input_file, output_file]
+    subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+for file in files_check:
+    input_file = os.path.join(main_dir,'data','ESC-US','01',file[:-3]+'ogg')
+    output_file = os.path.join(main_dir,'data','ESC-US','01_conv',file)
+    #!ffmpeg -i {input_file} {output_file}
+    convert_ogg_to_wav(input_file, output_file)
+
+number_files = len(os.listdir(path_output))
+
+#PYDUB WAY (FORCED IN COLAB)
+if '02_conv' not in os.listdir(os.path.join(main_dir,'data','ESC-US')):
+    os.mkdir(os.path.join(main_dir,'data','ESC-US','02_conv'))
+
+path_input = os.path.join(main_dir,'data','ESC-US','02')
+path_output = os.path.join(main_dir,'data','ESC-US','02_conv')
+
+# Get a list of all files and directories in the specified directory
+files_in = os.listdir(path_input)
+files_out = os.listdir(path_output)
+files_check = [file[:-3] + "wav" for file in files_in if file[:-3] + "wav" not in files_out]
+
+for file in files_check:
+    input_file = os.path.join(main_dir,'data','ESC-US','02',file[:-3]+'ogg')
+    output_file = os.path.join(main_dir,'data','ESC-US','02_conv',file)
+    x = AudioSegment.from_file(input_file)
+    x.export(output_file, format='wav') 
+
+
+number_files = len(os.listdir(path_output))
+
+#COMMENTI da fare
+def batch_training(main_dir, dataset_size = 1000, delete = True, shuffle = True ): 
+    #mancano i parametri per inserire il modello
+    data_dir = os.path.join(main_dir,'data','ESC-US')
+
+    list_dir = os.listdir(data_dir)
+    list_path = []
+
+    for folder in list_dir:
+        folder_path = os.path.join(data_dir,folder)
+        files = [os.path.join(folder_path, file) for file in os.listdir(folder_path) if file[-3:]=='ogg'  ]
+        list_path.extend(files)
+
+
+    if 'temp_conv' not in os.listdir(data_dir):
+        os.mkdir(os.path.join(data_dir,'temp_conv'))
+
+    num_batch = len(list_path)//dataset_size
+    print(len(list_path))
+    while len(list_path)>dataset_size:
+        if shuffle:
+            data = random.sample(list_path, dataset_size)
+        else:
+            data = list_path[:dataset_size]
+        list_path = [p for p in list_path if p not in data]
+        print(len(list_path))
+
+        for input_file in data:
+            out_file_name = input_file.split('\\')[-1:][0].replace('ogg','wav')
+            output_file = os.path.join(data_dir,'temp_conv',out_file_name)
+            x = AudioSegment.from_file(input_file)
+            x.export(output_file, format='wav') 
+
+
+        #TRAIN THE MODEL ON THE temp_conv DIR
+
+        if delete:
+            temp_files = os.listdir(os.path.join(data_dir,'temp_conv' ))
+            temp_files = [os.path.join(data_dir, 'temp_conv', file) for file in temp_files]
+            for temp in temp_files:
+                os.remove(temp)
+
+    return 
+
+
+
+'''REMOVED CELLS
+
+#subfolder_path = os.path.join(main_dir,'data','ESC-10-depth')
+subfolder_path = os.path.join(main_dir,'data','ESC-US')
+batch_size = 64
+validation_split = 0.25 
+normalize = True
+preprocessing = None # "STFT", "MEL", "MFCC"
+labels = None # None of 'inferred'
+
+train, val, test = create_dataset(subfolder_path, 
+                      batch_size = batch_size, 
+                      shuffle = True, 
+                      validation_split = validation_split, 
+                      cache_file_train = None, 
+                      cache_file_val = None, 
+                      cache_file_test = None, 
+                      normalize = normalize,
+                      preprocessing = preprocessing,
+                      delta = True,
+                      delta_delta = True, 
+                      labels = labels) 
+
+#show the first element of the dataset train 
+for element in train.take(1).unbatch():
+    print(element[0].shape)
+    #print(element[1].shape)
+    print(element[0])
+    #print(element[1])
+    break
+
+    
+
+    # Duplicate data for the autoencoder (input = output)
+py_funct = lambda audio: (audio, audio)
+train = train.map(py_funct)
+val = val.map(py_funct)
+test = test.map(py_funct)
+
+#show the first element of the dataset train 
+for element in train.take(1).unbatch():
+    print(element[0].shape)
+    print(type(element[0]))
+    #print(element[1].shape)
+    print(element[0])
+    #print(element[1])
+    #print((element[0] == element[1]).numpy().all())
+    break
+    
+
+#calculate the number of elements in each dataset 
+num_elements_train = round( number_files * (1 - validation_split))
+num_elements_val = round(number_files *  validation_split / 2)
+num_elements_test = round(number_files * validation_split / 2)
+
+# calculate the learning steps required, the problem is that the tf dataset is stored as an infinite dataset 
+train_steps = num_elements_train // batch_size
+val_steps = num_elements_val // batch_size
+test_steps = num_elements_test // batch_size
+
+print("Train steps required: ", train_steps)
+print("Val steps required: ", val_steps)
+print("Test steps required: ", test_steps)
+
+
+
+
+def hear(audio, encoder, decoder):
+    audio = tf.reshape(audio, (1, -1))  # Reshape audio to match the expected shape
+    code = encoder.predict(audio) 
+    reco = decoder.predict(code)
+    display(ipd.Audio(data = audio.numpy(), rate=41000))
+    display(ipd.Audio(data = reco, rate=41000))
+
+for element in train.take(1).unbatch():
+    hear(element[0], encoder, decoder)
+    break
+
+
+THIS CELL HAS BEEN SIMPLY WRITTEN DIFFERENTLY 
+
+
+def build_deep_autoencoder(img_shape, code_size):
+    """
+    Arguments:
+    img_shape -- size of the input layer
+    code_size -- the size of the hidden representation of the input (code)
+
+    Returns:
+    encoder -- keras model for the encoder network
+    decoder -- keras model for the decoder network
+    """
+
+    # encoder
+    encoder = tf.keras.Sequential()
+    encoder.add(tf.keras.Input(img_shape))
+
+    encoder.add(layers.Conv2D(32, (3, 3), activation='elu', padding='same'))
+    encoder.add(layers.MaxPool2D((2, 2), padding='same'))
+
+    encoder.add(layers.Conv2D(64, (3, 3), activation='elu', padding='same'))
+    encoder.add(layers.MaxPool2D((2, 2), padding='same'))
+
+    encoder.add(layers.Conv2D(128, (3, 3), activation='elu', padding='same'))
+    encoder.add(layers.MaxPool2D((2, 2), padding='same'))
+
+    encoder.add(layers.Conv2D(256, (3, 3), activation='elu', padding='same'))
+    encoder.add(layers.MaxPool2D((2, 2), padding='same'))
+
+    encoder.add(layers.Flatten())
+    encoder.add(layers.Dense(code_size))
+
+    # decoder
+    decoder = tf.keras.Sequential()
+    decoder.add(tf.keras.Input((code_size,)))
+
+    decoder.add(layers.Dense(27*31*256, activation='elu'))
+    decoder.add(layers.Reshape((27, 31, 256)))
+    decoder.add(layers.Conv2DTranspose(128, (3, 3), strides=2, activation='elu', padding='same'))
+    decoder.add(tf.keras.layers.Lambda(lambda x: tf.pad(x, paddings=tf.constant([[0, 0], [0, 1], [0, 0], [0, 0]]), mode='CONSTANT')))
+    decoder.add(layers.Conv2DTranspose(64, (3, 3), strides=2, activation='elu', padding='same'))
+    decoder.add(tf.keras.layers.Lambda(lambda x: tf.pad(x, paddings=tf.constant([[0, 0], [0, 0], [0, 1], [0, 0]]), mode='CONSTANT')))
+    decoder.add(layers.Conv2DTranspose(32, (3, 3), strides=2, activation='elu', padding='same'))
+    decoder.add(tf.keras.layers.Lambda(lambda x: tf.pad(x, paddings=tf.constant([[0, 0], [0, 1], [0, 0], [0, 0]]), mode='CONSTANT')))
+    decoder.add(layers.Conv2DTranspose(1, (3, 3), strides=2, activation=None, padding='same'))
+    decoder.add(tf.keras.layers.Lambda(lambda x: tf.pad(x, paddings=tf.constant([[0, 0], [0, 0], [0, 1], [0, 0]]), mode='CONSTANT')))
+
+    return encoder, decoder
+
+'''
 
