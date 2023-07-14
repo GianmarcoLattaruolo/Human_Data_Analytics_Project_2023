@@ -104,22 +104,29 @@ def listen_to_wrong_audio(data_frame, true_labels, predicted_labels, labels, con
 
 
 def plot_history(history):
+    keys = list(history.history.keys())
     plt.figure(figsize=(14, 5))
     
     plt.subplot(1, 2, 1)
     plt.grid(True)
-    plt.plot(100*np.array(history.history['accuracy']), label='accuracy')
-    plt.plot(100*np.array(history.history['val_accuracy']), label='val_accuracy')
+    plt.plot(100*np.array(history.history[keys[0]]), label=keys[0])
+    #plt.plot(100*np.array(history.history['accuracy']), label='accuracy')
+    plt.plot(100*np.array(history.history[keys[2]]), label=keys[2])
+    #plt.plot(100*np.array(history.history['val_accuracy']), label='val_accuracy')
     plt.xlabel('Epoch')
-    plt.ylabel('Accuracy [%]')
+    plt.ylabel(keys[0] + ' [%]')
+    #plt.ylabel('Accuracy [%]')
     plt.legend()
 
     plt.subplot(1, 2, 2)
     plt.grid(True)
-    plt.plot(history.history['loss'], label='loss')
-    plt.plot(history.history['val_loss'], label='val_loss')
+    plt.plot(history.history[keys[1]], label=keys[1])
+    #plt.plot(history.history['loss'], label='loss')
+    plt.plot(history.history[keys[3]], label=keys[3])
+    #plt.plot(history.history['val_loss'], label='val_loss')
     plt.xlabel('Epoch')
-    plt.ylabel('Loss [CrossEntropy]')
+    plt.ylabel(keys[1])
+    #plt.ylabel('Loss [CrossEntropy]')
     plt.legend()
     plt.show()
 

@@ -321,13 +321,11 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
         return train, val, test, label_names
     else:
         return train, val, test
-
-
-
+    
 
 def compile_and_fit(model, train_data, val_data, 
                     loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True), 
-                    optimizer = tf.keras.optimizers.Adam(learning_rate=1e-3), 
+                    optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=1e-3) if sys.platform == 'darwin' else tf.keras.optimizers.Adam(learning_rate=1e-3), 
                     metrics = ['accuracy'],
                     patience = 5,
                     epochs = 10,
@@ -359,7 +357,7 @@ def compile_fit_evaluate(data_frame, model, train, val, test, label_names=None,
                          load_model = False,
                          model_path = None,
                          loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True), 
-                         optimizer = tf.keras.optimizers.Adam(learning_rate=1e-3), 
+                         optimizer =tf.keras.optimizers.legacy.Adam(learning_rate=1e-3) if sys.platform == 'darwin' else tf.keras.optimizers.Adam(learning_rate=1e-3), 
                          metrics = ['accuracy'],
                          patience = 5,
                          epochs = 10,
