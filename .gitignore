@@ -10,6 +10,7 @@ AE/cartoonset100k.tgz
 **AE/cartoonset100k
 **/data/ESC-US-converted
 info_files/
-data/ESC-US-08.EJHqhjn6.tar.gz.part
-data/ESC-US-08.tar.gz
-
+Cached_datasets/*
+!Cached_datasets/quelli buoni ancora da inserire
+Saved_Datasets/
+Saved_models/

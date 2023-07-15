@@ -692,7 +692,19 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
     else:
         return train, val, test
 
+# we cannot reconstruct the audio from any spectral preprocessing as long as we use amplitude to decibel transformation:
+# we are discarding information sincew the orginal spectrum is complex valued
+segment = 20
+n_fft = None
+if n_fft is None:
+    n_fft = segment
+overlapping = 10
+nperseg = round(samplerate * segment / 1000)
+noverlap = round(samplerate * overlapping / 1000)
+n_fft = round(samplerate * n_fft / 1000)
+hop_length = nperseg - noverlap
 
+librosa.istft(example_train_batch[0].numpy(), hop_length=hop_length, n_fft=n_fft)
 
 '''
 
