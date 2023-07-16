@@ -396,6 +396,223 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
             return train, val, test
 
 
+def create_dataset_lite(data_frame = None,
+                        labeled = True,
+                        path_to_ogg_files = None,
+                        batch_size = 30,
+                        preprocessing = None, # "STFT", "MEL", "MFCC" or None,
+                        sample_rate = 44100,
+                        segment = 20,
+                        overlap = 10,
+                        cepstral_num = 40,
+                        N_filters = 50,
+                        ndim = 3, # number of dimension of the single elemnt in the output dataset,
+                        transpose = True,
+                        delta = True,
+                        delta_delta = True,
+                        verbose = 1,
+                        save_dataset_path = None,  #path to the folder to save the dataset,
+                        load_saved_dataset = None, #path to the folder to load the dataset
+                        cache_file = '', #path to the folder to cache the dataset or '' to cache in memory
+                        resize = False,
+                        new_height = 64,
+                        new_width = 128):
+
+    # set all seed
+    seed = 42
+    tf.random.set_seed(seed)
+    np.random.seed(seed)
+
+    #AUXILIARY FUNCTIONS
+    def load_audio(path):
+        # INPUT: the path of the audio file
+        # OUTPUT: the audio as a numpy array
+        path = path.numpy().decode("utf-8")
+        audio = librosa.load(path, sr = sample_rate)
+        return audio
+
+    def spectral_preprocessing(preprocessing, 
+                            audio, 
+                            sample_rate = 44100, 
+                            delta = delta, 
+                            delta_delta = delta_delta,
+                            segment = segment,
+                            overlap = overlap,
+                            cepstral_num = cepstral_num,
+                            N_filters = N_filters):
+        
+                            
+            audio = audio.numpy()
+
+            # transform the segment and overlapping from ms to samples
+            nperseg = round(sample_rate * segment / 1000)
+            noverlap = round(sample_rate * overlap / 1000)
+            n_fft = round(sample_rate * segment / 1000)
+            hop_length = nperseg - noverlap
+
+
+            # using librosa to perform the preprocessing
+            if preprocessing == "STFT":
+                stft_librosa = librosa.stft(audio, hop_length=hop_length, win_length=nperseg, n_fft=n_fft)
+                r = librosa.amplitude_to_db(np.abs(stft_librosa), ref=np.max)
+
+            elif preprocessing == "MEL":
+                mel_y = librosa.feature.melspectrogram(y=audio, sr=sample_rate, n_fft=n_fft, hop_length=hop_length,
+                                                    win_length=nperseg) 
+                r = librosa.power_to_db(mel_y, ref=np.max)
+            elif preprocessing == "MFCC":
+                mfcc_y = librosa.feature.mfcc(y=audio, sr=sample_rate, n_mfcc=cepstral_num, n_fft=n_fft,
+                                            hop_length=hop_length, htk=True, fmin=40, n_mels=N_filters)
+
+                # now we calculate the delta and delta-delta if needed
+                if delta:
+                    delta_mfccs = librosa.feature.delta(mfcc_y)
+                    if delta_delta:
+                        delta2_mfccs = librosa.feature.delta(mfcc_y, order=2)
+                    if delta and not delta_delta:
+                        mfccs_features = np.concatenate((mfcc_y, delta_mfccs))
+                    elif delta and delta_delta:
+                        mfccs_features = np.concatenate((mfcc_y, delta_mfccs, delta2_mfccs))
+                if not delta and not delta_delta:
+                    mfccs_features = mfcc_y
+                r = mfccs_features
+
+            return r
+
+    def find_max_lazy(dataset, labels = labeled, verbose = verbose):
+            max = 0
+            lazy_number = 4
+            if labels:
+                for audio, label in dataset.take(lazy_number):
+                    new = tf.reduce_max(tf.abs(audio)) 
+                    if new > max:
+                        max = new
+                if verbose > 0:
+                    print(f'The max value is {max}')
+            else:
+                for audio in dataset.take(lazy_number):
+                    new = tf.reduce_max(tf.abs(audio)) 
+                    if new > max:
+                        max = new
+                if verbose > 0:
+                    print(f'The max value is {max}')            
+            
+            return max, audio.numpy()
+
+    def save_dataset(dataset, save_file):
+        if save_file:
+            save_dir = os.path.dirname(save_file)
+            #check if the directory exists
+            if not os.path.exists(save_dir):
+                os.mkdir(save_dir)
+            else:
+                #check if the file exists
+                if os.path.exists(save_file):
+                    shutil.rmtree(save_file)
+
+            dataset.save(save_file)
+            if verbose>0:
+                print(f"Dataset saved in {save_file}")
+        return dataset
+
+    def laod_dataset(dataset_path):
+        dataset = tf.data.Dataset.load(dataset_path)
+        return dataset
+
+    def reshape(audio, ndim = ndim, preprocessing = preprocessing, verbose = verbose, tranpose = transpose):
+        if preprocessing is not None:
+            if not ndim in [2,3]:
+                raise ValueError(f'ndim must be 2 or 3, not {ndim}')
+            if ndim == 2:
+                audio = tf.squeeze(audio) 
+                if transpose:
+                    audio = tf.transpose(audio)
+            elif ndim == 3:
+                audio = tf.squeeze(audio)
+                if transpose:
+                    audio = tf.transpose(audio)
+                audio = tf.expand_dims(audio, axis=2)
+        else:
+            if not ndim in [1,2]:
+                raise ValueError(f'ndim must be 1 or 2, not {ndim}')
+            if ndim == 1:
+                audio = tf.squeeze(audio)
+            elif ndim == 2:
+                audio = tf.expand_dims(audio, axis=1)
+        return audio
+
+    def resize_images(image, new_height = new_height, new_width = new_width):
+        # INPUT: the audio preprocessed by STFT, MEL or MFCC
+        # OUTPUT: the audio reshaped as a tensor (needed for the convolutional layers)
+        image = tf.image.resize(image, [new_height, new_width])
+        return image
+
+    #load save dataset if available
+    if load_saved_dataset is not None:
+        dataset = laod_dataset(load_saved_dataset)
+        dataset = dataset.cache(filename = cache_file).shuffle(dataset.cardinality().numpy(), reshuffle_each_iteration=True).batch(batch_size).prefetch(tf.data.AUTOTUNE)
+        return dataset
+
+    # dataset creation
+    (file_path,labels) = (data_frame.full_path, pd.get_dummies(data_frame.category))
+    dataset = tf.data.Dataset.from_tensor_slices((file_path, labels))
+    dataset  = dataset.map(lambda path, label: (tf.py_function(func=load_audio, inp=[path], Tout=tf.float32), label))
+    
+    # spectral preprocessing and resizing
+    if preprocessing is not None:
+        if verbose > 0:
+            print(f'Preprocessing: {preprocessing}')
+        if labeled:
+            dataset = dataset.map(lambda audio, label: (tf.py_function(func=spectral_preprocessing, inp=[preprocessing,audio], Tout=tf.float32), label),
+                            num_parallel_calls=tf.data.AUTOTUNE,
+                            deterministic=False)
+            if resize:
+                if verbose > 0:
+                    print(f'Resizing with shape: {new_height}x{new_width}')
+                dataset = dataset.map(lambda audio, label: (tf.py_function(func=resize_images, inp=[audio], Tout=tf.float32), label),
+                            num_parallel_calls=tf.data.AUTOTUNE,
+                            deterministic=False)
+        else:
+            dataset = dataset.map(lambda audio: tf.py_function(func=spectral_preprocessing, inp=[preprocessing,audio], Tout=tf.float32),
+                            num_parallel_calls=tf.data.AUTOTUNE,
+                            deterministic=False)
+            if resize:
+                if verbose > 0:
+                    print(f'Resizing with shape: {new_height}x{new_width}')
+                dataset = dataset.map(lambda audio: tf.py_function(func=resize_images, inp=[audio], Tout=tf.float32),
+                            num_parallel_calls=tf.data.AUTOTUNE,
+                            deterministic=False)
+        
+    #normalization
+    max, example_audio = find_max_lazy(dataset)
+    if labeled:
+        dataset = dataset.map(lambda audio, label: (audio/max, label), num_parallel_calls=tf.data.AUTOTUNE, deterministic = False)
+    else:
+        dataset = dataset.map(lambda audio: audio/max, num_parallel_calls=tf.data.AUTOTUNE, deterministic = False)    
+
+    #adjust the shape of the elements in the dataset:
+    if len(example_audio.shape)!=ndim:
+        if labeled:
+            dataset = dataset.map(lambda audio, label: (tf.py_function(func = reshape, inp = [audio], Tout = tf.float32), label), 
+                            num_parallel_calls=tf.data.AUTOTUNE, 
+                            deterministic = False)
+        else:
+            dataset = dataset.map(lambda audio: tf.py_function(func = reshape, inp = [audio], Tout = tf.float32),
+                                num_parallel_calls=tf.data.AUTOTUNE, 
+                                deterministic = False)
+
+    # save the dataset in a path
+    if save_dataset_path is not None:
+        dataset = save_dataset(dataset, save_dataset_path)
+
+    # final rutine
+    dataset = dataset.cache(filename = cache_file)
+    dataset = dataset.shuffle(dataset.cardinality().numpy(), reshuffle_each_iteration=True)
+    dataset = dataset.batch(batch_size)
+    dataset = dataset.prefetch(tf.data.AUTOTUNE)
+    if labeled is not None:
+        return dataset, labels
+
 
 def example_batch(train, val= None, test = None, label_names=None, 
                   verbose=1,
@@ -441,8 +658,10 @@ def example_batch(train, val= None, test = None, label_names=None,
         for example_test_batch, label in test.take(1):
             print(f'Audio shape in test : {example_test_batch.shape}')
             print(f'Label shape in test : {label.shape}')
-
-    return INPUT_DIM, len(label_names)
+    if label_names is not None:
+        return INPUT_DIM, len(label_names)
+    else:
+        return INPUT_DIM
 
 
 def compile_and_fit(model, train_data, val_data, 
