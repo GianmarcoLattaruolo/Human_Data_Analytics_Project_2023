@@ -74,7 +74,6 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
             return train, val, test
     
     #auxiliary functions
-
     @tf.autograph.experimental.do_not_convert
     def squeeze(audio, labels=None):
         # INPUT: audio as a tf dataset
@@ -223,8 +222,8 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
         if verbose>0:
             print('You are using an unlabelled dataset')
         dataset = tf.data.Dataset.list_files(subfolder_path + '/*.ogg', shuffle=False)
-        #dataset = dataset.map(lambda path: tf.py_function(func=decode_ogg, inp=[path], Tout=tf.float32))
-        dataset = dataset.inteleave(lambda path:  tf.py_function(func=decode_ogg, inp=[path], Tout=tf.float32), block_length=16, num_parallel_calls=tf.data.AUTOTUNE )
+        dataset = dataset.map(lambda path: tf.py_function(func=decode_ogg, inp=[path], Tout=tf.float32))
+        #dataset = dataset.interleave(lambda path:  tf.py_function(func=decode_ogg, inp=[path], Tout=tf.float32), block_length=16, num_parallel_calls=tf.data.AUTOTUNE )
 
         # Get the total number of samples in the dataset
         dataset_size = dataset.cardinality().numpy()
@@ -380,7 +379,7 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
     val = save_dataset(val, save_val)
     test = save_dataset(test, save_test)
 
-
+    #Several return statements depending on the needs
     if labels is not None:
         if show_example_batch:
             if verbose > 0:
@@ -398,7 +397,7 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
 
 
 
-def example_batch(train, val, test, label_names=None, 
+def example_batch(train, val= None, test = None, label_names=None, 
                   verbose=1,
                   show_figure = True,
                   check_val_test = False,
@@ -434,7 +433,7 @@ def example_batch(train, val, test, label_names=None,
         if len(INPUT_DIM) == 1 and listen_to_audio:
             display(ipd.Audio(example_train_batch[0].numpy(), rate=44100))
 
-    if check_val_test:
+    if check_val_test and val is not None and test is not None:
         for example_val_batch, label in val.take(1):
             print(f'Audio shape in validation : {example_val_batch.shape}')
             print(f'Label shape in validation : {label.shape}')
@@ -561,4 +560,69 @@ def compile_fit_evaluate(data_frame, model, train, val, test, label_names=None,
         return model, history
     
 
+def fit_cross_validation(model, train, val, test, label_names=None,
+                         loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True), 
+                         optimizer =tf.keras.optimizers.legacy.Adam(learning_rate=1e-3) if sys.platform == 'darwin' else tf.keras.optimizers.Adam(learning_rate=1e-3), 
+                         metrics = ['accuracy'],
+                         patience = 5,
+                         epochs = 10,
+                         steps_per_epoch = None,
+                         verbose = 1,
+                         show_history = True,
+                         show_test_evaluation = True,
+                         show_confusion_matrix = True,
+                         listen_to_wrong = True,
+                         save_the_model = False,
+                         name_model = None,
+                         save_weights_only = False,
+                         save_format = 'tf',
+                         save_best_only = True,
+                         model_filename = None,
+                         ):
+    model,history = compile_and_fit(model, train, val,
+                                    optimizer=optimizer,
+                                    loss=loss,  
+                                    metrics=metrics,
+                                    patience=patience,
+                                    epochs=epochs,
+                                    steps_per_epoch=steps_per_epoch,
+                                    verbose=verbose,
+                                    model_filename=model_filename)
 
+    if show_history:
+        plot_history(history)
+
+    if show_test_evaluation:
+        scores = model.evaluate(test, return_dict=True)
+        display(scores)
+
+    if show_confusion_matrix:
+        #predict the test set
+        y_pred = model.predict(test)
+        y_pred = tf.argmax(y_pred, axis=1)
+
+        y_true = tf.concat(list(test.map(lambda s,lab: lab)), axis=0)
+        y_true = tf.argmax(y_true,axis=1)
+
+        #confusion matrix
+        confusion_mtx = confusion_matrix(y_true, y_pred, label_names)
+
+    if listen_to_wrong:
+        listen_to_wrong_audio(data_frame, y_true, y_pred, label_names, confusion_mtx)
+
+    if save_the_model:
+        if name_model is None:
+            print("You need to specify the path to save the model")
+        else:
+            path_to_save = os.path.join(main_dir,'models',name_model)
+            if save_weights_only:
+                model.save_weights(path_to_save, save_format=save_format)
+            else:
+                model.save(path_to_save, save_format=save_format, save_best_only=save_best_only)
+
+    if show_confusion_matrix:
+        if show_test_evaluation:
+            return model, history, confusion_mtx, scores
+        
+    else:
+        return model, history

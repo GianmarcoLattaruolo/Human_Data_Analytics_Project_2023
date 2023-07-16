@@ -78,6 +78,7 @@ def Spectral_Analysis(audio,
     if n_fft==None:
         n_fft = segment
     nperseg = round(sample_rate * segment / 1000)  # Calculate the number of samples per segment win_length = nperseg
+    print(f'A segment of {segment} ms has {nperseg} samples')
     noverlap = round(sample_rate * overlapping / 1000)
     n_fft = round(sample_rate * n_fft /1000)
     hop_length = nperseg-noverlap
@@ -141,7 +142,10 @@ def Spectral_Analysis(audio,
         print('\n')
         print(f'librosa STFT shape {stft_librosa.shape}')
         print(f'Librosa frames_to_time has shape {time_librosa.shape}, (the time vector for STFT)')
-        print(f'Is it equal to the time vector of Scipy? {(time_librosa-0.01==time_scipy).all()}')
+        try:
+            print(f'Is it equal to the time vector of Scipy? {(time_librosa-0.01==time_scipy).all()}')
+        except:
+            pass
         print(f'Librosa fft_frequencies has shape {freq_librosa.shape} (compute the frequencies given the sample_rate and the windowed length)')
         print(f'Is it equal to Scipy frequencies? {(freq_librosa==freq_scipy).all()}')
         print('\n')
