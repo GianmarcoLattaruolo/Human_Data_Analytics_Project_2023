@@ -14,4 +14,4 @@ Cached_datasets/*
 !Cached_datasets/quelli buoni ancora da inserire
 Saved_Datasets/
 Saved_models/
-main_notebook_copy.ipynb
+main_notebook_pre_cross_validation.ipynb

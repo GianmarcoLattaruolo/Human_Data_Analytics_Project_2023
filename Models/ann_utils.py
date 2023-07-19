@@ -641,7 +641,7 @@ def example_batch(train, val= None, test = None, label_names=None,
                 print(f'Label shape: {label.shape}')
                 print(f'Label: {label_names[np.where(label.numpy()[0]==1)[0][0]]}')
         INPUT_DIM = example_train_batch.shape[1:]
-        if len(INPUT_DIM) == 1 and show_figure:
+        if (len(INPUT_DIM) == 1 or (INPUT_DIM[-1]==1 and len(INPUT_DIM)==2)) and show_figure:
             plt.subplots(1, 1, figsize=(9, 5))
             plt.tight_layout(pad=3)
             plt.plot(example_train_batch[0].numpy())
@@ -649,7 +649,7 @@ def example_batch(train, val= None, test = None, label_names=None,
                 plt.title('Audio wave plot of class: '+label_names[np.where(label.numpy()[0]==1)[0][0]])
             else:
                 plt.title('Audio wave plot')
-        if len(INPUT_DIM) > 1 and show_figure:
+        elif len(INPUT_DIM) > 1 and show_figure:
             plt.figure(figsize=(10, 4))
             plt.imshow(example_train_batch[0].numpy(), aspect = 'auto')
             plt.colorbar()
@@ -657,6 +657,7 @@ def example_batch(train, val= None, test = None, label_names=None,
                 plt.title(f'Spectrogram of class {label_names[np.where(label.numpy()[0]==1)[0][0]]}')
             else:
                 plt.title('Spectrogram')
+
         if len(INPUT_DIM) == 1 and listen_to_audio:
             display(ipd.Audio(example_train_batch[0].numpy(), rate=44100))
 
@@ -682,14 +683,18 @@ def K_fold_training(dataset, build_model,
                     patience = 10,
                     **kwargs):
         
-    callbacks = [tf.keras.callbacks.EarlyStopping(monitor='loss', 
+    callbacks_loss = [tf.keras.callbacks.EarlyStopping(monitor='loss', 
                                                       mode='auto', 
                                                       verbose=verbose,
                                                       patience=patience)]
+    callback_acc = [tf.keras.callbacks.EarlyStopping(monitor='accuracy',
+                                                    mode='auto',
+                                                    verbose=verbose,
+                                                    patience=patience)]
 
     #build the keras-sklearn regressor
     #temp_params = {key_param:params[key_params][0] for key_param in params.keys()}
-    model = KerasClassifier( model = build_model, epochs = epochs, verbose = verbose, callbacks = callbacks, **params)
+    model = KerasClassifier( model = build_model, epochs = epochs, verbose = verbose, callbacks = [callbacks_loss,callback_acc], **params)
     
     def my_custom_loss_func(y_true, y_pred, verbose = verbose):
         y_pred = np.argmax(y_pred, axis=1)
@@ -710,8 +715,15 @@ def K_fold_training(dataset, build_model,
     model_cv = grid_search.fit(X, y)
     result = pd.DataFrame( pd.DataFrame(model_cv.cv_results_, index = model_cv.cv_results_['params']).mean_test_one_hot_accuracy)
     result.columns = ['mean_accuracy']
+    best_params = result.index[np.argmax(result.mean_accuracy)]
 
-    return model_cv, result
+    if verbose >0:
+        print(f'The best parameters are {best_params}')
+        print(f'The accuracy score are')
+    
+    display(result)
+
+    return model_cv, result, best_params
 
 
 def compile_and_fit(model, train_data, val_data, 
