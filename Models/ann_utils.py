@@ -56,28 +56,63 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
                    save_train = None, # save the dataset as a tfrecord file
                    save_val = None,
                    save_test = None,
+                   save_labels = None, #path to the file without the extension (always txt)
                    show_example_batch = False, # show an example of the batch
+                   ndim = 2,
+                   transpose = True,
                    ): 
                    # INPUT: str - path of the audio directory 
                    # OUTPUT: train, validation, test set as tensorflow dataset
 
+    save_labels = save_labels + '.txt'
+
     sample_rate = 44100
+    #check if the dataset are already saved and eventually load them
+    if labels is not None:
+        if save_train is not None and save_test is not None and save_val is not None and save_labels is not None:
+
+            if os.path.exists(save_train) and os.path.exists(save_test) and os.path.exists(save_val) and os.path.exists(save_labels):
+                if verbose > 0:
+                    print("Loading the dataset from the saved file")
+                train = tf.data.Dataset.load(save_train)
+                val = tf.data.Dataset.load(save_val)
+                test = tf.data.Dataset.load(save_test)
+                with open(save_labels, 'r') as f:
+                    label_names = [line.rstrip('\n') for line in f]
+
+                if show_example_batch:
+                    INPUT_DIM, n_labels = example_batch(train, val, test, label_names, verbose=verbose)
+                    return train, val, test, label_names, INPUT_DIM, n_labels
+                else:
+                    return train, val, test, label_names
+                
+            #tell if you have just some of train, val and test saved, not all
+            elif os.path.exists(save_train) or os.path.exists(save_test) or os.path.exists(save_val) or os.path.exists(save_labels):
+                print("You have just some of the files saved, not all of them")
+                print("Proceding with normal dataset building.")
+
+    else:
+        if save_train is not None and save_test is not None and save_val is not None:
+            if os.path.exists(save_train) and os.path.exists(save_test) and os.path.exists(save_val):
+                if verbose > 0:
+                    print("Loading the dataset from the saved file")
+                train = tf.data.Dataset.load(save_train)
+                val = tf.data.Dataset.load(save_val)
+                test = tf.data.Dataset.load(save_test)
+
+                if show_example_batch:
+                    INPUT_DIM = example_batch(train, val, test, verbose=verbose)
+                    return train, val, test, INPUT_DIM
+                else:
+                    return train, val, test
+            #tell if you have just some of train, val and test saved, not all
+            elif os.path.exists(save_train) or os.path.exists(save_test) or os.path.exists(save_val):
+                print("You have just some of the files saved, not all of them")
+                print("Proceding with normal dataset building.")
+
     if verbose > 0:
         print("Creating dataset from folder 3: ", subfolder_path)
 
-    #check if the dataset are already saved 
-    if save_train is not None and save_test is not None and save_val is not None:
-        if os.path.exists(save_train) and os.path.exists(save_test) and os.path.exists(save_val):
-            if verbose > 0:
-                print("Loading the dataset from the saved file")
-            train = tf.data.Dataset.load(save_train)
-            val = tf.data.Dataset.load(save_val)
-            test = tf.data.Dataset.load(save_test)
-
-            if labels is not None:
-                print(f"Warning, if you need the labels you can"+"'"+f"t load the dataset from the saved file, delete one of the {save_train}, {save_test}, {save_val}")
-            return train, val, test
-    
     #auxiliary functions
     @tf.autograph.experimental.do_not_convert
     def squeeze(audio, labels=None):
@@ -124,6 +159,7 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
         if preprocessing == "STFT":
             stft_librosa = librosa.stft(audio, hop_length=hop_length, win_length=nperseg, n_fft=n_fft)
             r = librosa.amplitude_to_db(np.abs(stft_librosa), ref=np.max)
+
 
         elif preprocessing == "MEL":
             mel_y = librosa.feature.melspectrogram(y=audio, sr=sample_rate, n_fft=n_fft, hop_length=hop_length,
@@ -196,6 +232,27 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
         ogg_audio = librosa.load(ogg_path, sr = sample_rate)
         return ogg_audio
 
+    def reshape(audio, ndim = ndim, preprocessing = preprocessing, verbose = verbose, tranpose = transpose):
+        if preprocessing is not None:
+            if not ndim in [2,3]:
+                raise ValueError(f'ndim must be 2 or 3, not {ndim}')
+            if ndim == 2:
+                audio = tf.squeeze(audio) 
+                if transpose:
+                    audio = tf.transpose(audio)
+            elif ndim == 3:
+                audio = tf.squeeze(audio)
+                if transpose:
+                    audio = tf.transpose(audio)
+                audio = tf.expand_dims(audio, axis=2)
+        else:
+            if not ndim in [1,2]:
+                raise ValueError(f'ndim must be 1 or 2, not {ndim}')
+            if ndim == 1:
+                audio = tf.squeeze(audio)
+            elif ndim == 2:
+                audio = tf.expand_dims(audio, axis=1)
+        return audio
     # creation of the tf dataset from an audio folder 
     if labels is not None:
 
@@ -283,18 +340,18 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
         if resize:
             if labels:
                 train = train.map(lambda image, target: (tf.py_function(reshape_images_map, [image],[tf.float32]), target))
-                train = train.map(lambda matrix, target:(reshape_tensor(matrix), target), tf.data.AUTOTUNE)
+                #train = train.map(lambda matrix, target:(reshape_tensor(matrix), target), tf.data.AUTOTUNE)
                 val = val.map(lambda image, target: (tf.py_function(reshape_images_map, [image], [tf.float32]), target))
-                val = val.map(lambda matrix, target:(reshape_tensor(matrix), target), tf.data.AUTOTUNE)
+                #val = val.map(lambda matrix, target:(reshape_tensor(matrix), target), tf.data.AUTOTUNE)
                 test = test.map(lambda image, target: (tf.py_function(reshape_images_map, [image], [tf.float32]), target))
-                test = test.map(lambda matrix, target:(reshape_tensor(matrix), target), tf.data.AUTOTUNE)
+                #test = test.map(lambda matrix, target:(reshape_tensor(matrix), target), tf.data.AUTOTUNE)
             else:
                 train = train.map(lambda image: tf.py_function(reshape_images_map, [image], [tf.float32]))
-                train = train.map(lambda matrix: reshape_tensor(matrix), tf.data.AUTOTUNE)
+                #train = train.map(lambda matrix: reshape_tensor(matrix), tf.data.AUTOTUNE)
                 val = val.map(lambda image: tf.py_function(reshape_images_map, [image], [tf.float32]))
-                val = val.map(lambda matrix: reshape_tensor(matrix), tf.data.AUTOTUNE)
+                #val = val.map(lambda matrix: reshape_tensor(matrix), tf.data.AUTOTUNE)
                 test = test.map(lambda image: tf.py_function(reshape_images_map, [image], [tf.float32]))
-                test = test.map(lambda matrix: reshape_tensor(matrix), tf.data.AUTOTUNE)
+                #test = test.map(lambda matrix: reshape_tensor(matrix), tf.data.AUTOTUNE)
 
 
     if resize and not preprocessing:
@@ -320,6 +377,10 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
         val = val.map(lambda x: (x, x))
         test = test.map(lambda x: (x, x))
 
+    #final check for the dimension with reshape
+    train = train.map(lambda audio, target: (reshape(audio), target), tf.data.AUTOTUNE)
+    val = val.map(lambda audio, target: (reshape(audio), target), tf.data.AUTOTUNE)
+    test = test.map(lambda audio, target: (reshape(audio), target), tf.data.AUTOTUNE)
 
     # Caching the dataset
     def cache_dataset(dataset, cache_file):
@@ -338,9 +399,9 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
 
     if verbose > 0 and cache_file_train is not None:
         print("Caching the dataset")
-    train = cache_dataset(train, cache_file_train)
-    val = cache_dataset(val, cache_file_val)
-    test = cache_dataset(test, cache_file_test)
+    #train = cache_dataset(train, cache_file_train)
+    #val = cache_dataset(val, cache_file_val)
+    #test = cache_dataset(test, cache_file_test)
 
     # Shuffling the dataset 
     if shuffle:
@@ -368,7 +429,7 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
 
     #saving the dataset as save
     def save_dataset(dataset, save_file):
-        if save_file:
+        if save_file and type(dataset)!=np.ndarray:
             save_dir = os.path.dirname(save_file)
             #check if the directory exists
             if not os.path.exists(save_dir):
@@ -381,13 +442,34 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
             dataset.save(save_file)
             if verbose>0:
                 print(f"Dataset saved in {save_file}")
+                
+        elif save_file and type(dataset)==np.ndarray:
+        
+            #check if the file .txt already exists
+            if os.path.exists(save_file):
+                os.remove(save_file)
+
+            #create an empty txt file
+            with open(save_file, 'w') as f:
+                for s in dataset:
+                    f.write(str(s) + '\n')
+
         return dataset
     
     if verbose>0 and save_train is not None:
         print("Saving the datasets...")
+
+    #saving the datasets
     train = save_dataset(train, save_train)
     val = save_dataset(val, save_val)
     test = save_dataset(test, save_test)
+    #saving the labels
+    if labels is not None:
+        if verbose > 0:
+            print("Saving the labels...")
+        label_names = save_dataset(label_names, save_labels)
+    
+
 
     #Several return statements depending on the needs
     if labels is not None:
@@ -717,7 +799,7 @@ def K_fold_training(dataset, build_model,
     result.columns = ['mean_accuracy']
     best_params = result.index[np.argmax(result.mean_accuracy)]
 
-    if verbose >0:
+    if verbose > 0:
         print(f'The best parameters are {best_params}')
         print(f'The accuracy score are')
     
