@@ -13,7 +13,7 @@ import time
 import importlib
 importlib.reload(importlib.import_module('Visualization.model_plot'))
 from Visualization.model_plot import plot_history, confusion_matrix, listen_to_wrong_audio
-from tensorflow.keras.models import save_model
+from tensorflow.keras.models import save_model # from labs
 from scikeras.wrappers import KerasClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_curve
 from sklearn.metrics import make_scorer
@@ -63,8 +63,8 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
                    ): 
                    # INPUT: str - path of the audio directory 
                    # OUTPUT: train, validation, test set as tensorflow dataset
-
-    save_labels = save_labels + '.txt'
+    if save_labels is not None:
+        save_labels = save_labels + '.txt'
 
     sample_rate = 44100
     #check if the dataset are already saved and eventually load them
@@ -613,8 +613,6 @@ def create_dataset_lite(data_frame = None,
 
     def reshape(audio, ndim = ndim, preprocessing = preprocessing, verbose = verbose, tranpose = transpose):
         if preprocessing is not None:
-            if not ndim in [2,3]:
-                raise ValueError(f'ndim must be 2 or 3, not {ndim}')
             if ndim == 2:
                 audio = tf.squeeze(audio) 
                 if transpose:
@@ -624,13 +622,15 @@ def create_dataset_lite(data_frame = None,
                 if transpose:
                     audio = tf.transpose(audio)
                 audio = tf.expand_dims(audio, axis=2)
+            if not ndim in [2,3]:
+                raise ValueError(f'ndim must be 2 or 3, not {ndim}')
         else:
-            if not ndim in [1,2]:
-                raise ValueError(f'ndim must be 1 or 2, not {ndim}')
             if ndim == 1:
                 audio = tf.squeeze(audio)
             elif ndim == 2:
                 audio = tf.expand_dims(audio, axis=1)
+            if not ndim in [1,2]:
+                raise ValueError(f'ndim must be 1 or 2, not {ndim}')
         return audio
 
     def resize_images(image, new_height = new_height, new_width = new_width):
@@ -683,15 +683,15 @@ def create_dataset_lite(data_frame = None,
         dataset = dataset.map(lambda audio: audio/max, num_parallel_calls=tf.data.AUTOTUNE, deterministic = False)    
 
     #adjust the shape of the elements in the dataset:
-    if len(example_audio.shape)!=ndim:
-        if labeled:
-            dataset = dataset.map(lambda audio, label: (tf.py_function(func = reshape, inp = [audio], Tout = tf.float32), label), 
+    #if len(example_audio.shape)!=ndim:
+    if labeled:
+        dataset = dataset.map(lambda audio, label: (tf.py_function(func = reshape, inp = [audio], Tout = tf.float32), label), 
+                        num_parallel_calls=tf.data.AUTOTUNE, 
+                        deterministic = False)
+    else:
+        dataset = dataset.map(lambda audio: tf.py_function(func = reshape, inp = [audio], Tout = tf.float32),
                             num_parallel_calls=tf.data.AUTOTUNE, 
                             deterministic = False)
-        else:
-            dataset = dataset.map(lambda audio: tf.py_function(func = reshape, inp = [audio], Tout = tf.float32),
-                                num_parallel_calls=tf.data.AUTOTUNE, 
-                                deterministic = False)
 
     # save the dataset in a path
     if save_dataset_path is not None:
@@ -782,7 +782,8 @@ def K_fold_training(dataset, build_model,
         y_pred = np.argmax(y_pred, axis=1)
         y_true = np.argmax(y_true, axis=1)
         if verbose > 0:
-            print(f'accuracy on test for this fold is {accuracy_score(y_true, y_pred)}')
+            pass
+        print(f'accuracy on test for this fold is {accuracy_score(y_true, y_pred)}')
         return accuracy_score(y_true, y_pred)
     score = {'one_hot_accuracy':make_scorer(my_custom_loss_func, greater_is_better=True)}
 

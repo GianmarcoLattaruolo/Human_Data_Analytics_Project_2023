@@ -40,7 +40,7 @@ def one_random_audio(main_dir):
     return y, sr
 
 
-def plot_clip_overview(df, sample_rate=44100, segment=25, overlapping=10, column = 5):
+def plot_clip_overview(df, sample_rate=44100, segment=25, overlapping=10, column=5, preprocessing='stft'):
 
     segment_samples = round(sample_rate * segment / 1000)  # Calculate the number of samples per segment
     overlap_samples = round(sample_rate * overlapping / 1000)
@@ -48,20 +48,39 @@ def plot_clip_overview(df, sample_rate=44100, segment=25, overlapping=10, column
     categories = list(set(df.category))
     row = len(categories)
     
-    plt.subplots(row, column, figsize=(12, 1.5*row))
+    plt.subplots(row, column, figsize=(12, 1.5 * row))
     plt.tight_layout(pad=0.7)
     
-    for j,audio_type in enumerate(categories):
+    for j, audio_type in enumerate(categories):
         paths = list(df.full_path[df.category == audio_type])
-        paths = random.sample(paths,column)
+        paths = random.sample(paths, column)
 
-        for i,audio_sample in enumerate(paths):
-            data, samplerate = librosa.load(audio_sample,sr=44100)
-            D = librosa.stft(data, win_length = segment_samples, hop_length=overlap_samples)  # STFT of y
-            S_db = librosa.amplitude_to_db(np.abs(D), ref=np.max)
-            plt.subplot(row,column,j*column+i+1)
-            plt.title(audio_type)
-            librosa.display.specshow(S_db)
+        for i, audio_sample in enumerate(paths):
+            data, samplerate = librosa.load(audio_sample, sr=44100)
+            
+            if preprocessing == 'stft':
+                # STFT transformation
+                D = librosa.stft(data, win_length=segment_samples, hop_length=overlap_samples)
+                S_db = librosa.amplitude_to_db(np.abs(D), ref=np.max)
+                
+                plt.subplot(row,column,j*column+i+1)
+                plt.title(audio_type)
+                librosa.display.specshow(S_db)
+                #plt.colorbar(format='%+2.0f dB')
+                
+            elif preprocessing == 'mfcc':
+                # MFCC transformation
+                mfccs = librosa.feature.mfcc(y=data, sr=samplerate, n_mfcc=13)
+                max = np.max(np.abs(mfccs))
+                mfccs = mfccs/max
+                
+                plt.subplot(row,column,j*column+i+1)
+                plt.title(audio_type)
+                librosa.display.specshow(mfccs)
+                plt.colorbar()
+                
+    plt.show()
+
 
 def Spectral_Analysis(audio,
                       sample_rate = 44100,
