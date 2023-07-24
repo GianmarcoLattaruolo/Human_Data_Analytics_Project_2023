@@ -482,7 +482,7 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
             return train, val, test, label_names
     else:
         if show_example_batch:
-            INPUT_DIM = example_batch(train, val, test, verbose)
+            INPUT_DIM = example_batch(train, val, test, verbose = verbose)
             return train, val, test, INPUT_DIM
         else:
             return train, val, test
@@ -923,4 +923,17 @@ def compile_fit_evaluate(data_frame, model, train, val, test, label_names=None,
     else:
         return model, history
     
+@tf.autograph.experimental.do_not_convert
+def get_model_size(model):
+    temp_file = "temp_model.h5"
+    model.save(temp_file)
+    size_mb = os.path.getsize(temp_file) / (1024 * 1024)  # Size in megabytes
+    os.remove(temp_file)
+    return size_mb
 
+@tf.autograph.experimental.do_not_convert
+def count_parameters(model):
+    trainable_params = sum(tf.keras.backend.count_params(p) for p in model.trainable_variables)
+    non_trainable_params = sum(tf.keras.backend.count_params(p) for p in model.non_trainable_variables)
+    total_params = trainable_params + non_trainable_params
+    return total_params
