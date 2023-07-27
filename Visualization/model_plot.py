@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sb
 import numpy as np
 import pandas as pd
-
+import plotly.express as px
 import librosa
 import IPython.display as ipd
 
@@ -218,8 +218,6 @@ def plot_latent_space(encoder, dataset, show_labels = "all", numeric_labels = Fa
     for i in show_labels:
         if show_labels[i]==0:
             df = df[df['label']!=i]
-    
-
 
     #transform label to string with mapping dict where the keys are the string labels and the values are the numeric labels        
     if not numeric_labels:
