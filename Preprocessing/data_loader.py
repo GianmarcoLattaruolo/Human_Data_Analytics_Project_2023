@@ -173,7 +173,7 @@ def reshape_US(num_files):
     #rename the new folders to cancel _final
     for i,folder in enumerate(final_folders_list):
         os.rename(folder, os.path.join(main_dir, 'data', 'ESC-US',num(i+1)))
-
+    return
 
 
 def download_dataset(name,make_subfold = False):

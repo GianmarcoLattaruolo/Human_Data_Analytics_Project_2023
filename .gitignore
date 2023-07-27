@@ -15,3 +15,4 @@ Cached_datasets/*
 Saved_Datasets/
 Saved_models/
 main_notebook_pre_cross_validation.ipynb
+history_supervised.json

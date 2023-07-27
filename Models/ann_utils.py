@@ -254,6 +254,7 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
                 audio = tf.expand_dims(audio, axis=1)
         return audio
     # creation of the tf dataset from an audio folder 
+    # Supervised learning case
     if labels is not None:
 
         train, val_test = tf.keras.utils.audio_dataset_from_directory(
@@ -279,7 +280,7 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
         # dropping the extra dimension from the tensors 
         train = train.map(squeeze, tf.data.AUTOTUNE)
         val_test = val_test.map(squeeze, tf.data.AUTOTUNE)
-
+    # Unsupervised learning case
     else:
         if verbose>0:
             print('You are using an unlabelled dataset')
@@ -295,7 +296,7 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
         # Calculate the number of samples for validation
         validation_size = int(dataset_size * validation_split)
         if verbose > 0:
-            print(f"Validation size: {validation_size} samples")
+            print(f"Validation-Test size: {validation_size} samples")
 
         # Split the dataset into train and validation sets
         train = dataset.skip(validation_size)
@@ -398,10 +399,10 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
         return dataset
 
     if verbose > 0 and cache_file_train is not None:
-        print("Caching the dataset")
-    #train = cache_dataset(train, cache_file_train)
-    #val = cache_dataset(val, cache_file_val)
-    #test = cache_dataset(test, cache_file_test)
+        print("Caching the datasets...")
+    train = cache_dataset(train, cache_file_train)
+    val = cache_dataset(val, cache_file_val)
+    test = cache_dataset(test, cache_file_test)
 
     # Shuffling the dataset 
     if shuffle:
@@ -430,6 +431,7 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
     #saving the dataset as save
     def save_dataset(dataset, save_file):
         if save_file and type(dataset)!=np.ndarray:
+            print('dataset type',type(dataset))
             save_dir = os.path.dirname(save_file)
             #check if the directory exists
             if not os.path.exists(save_dir):
@@ -463,6 +465,7 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
     train = save_dataset(train, save_train)
     val = save_dataset(val, save_val)
     test = save_dataset(test, save_test)
+
     #saving the labels
     if labels is not None:
         if verbose > 0:
@@ -813,6 +816,7 @@ def compile_and_fit(model, train_data, val_data,
                     loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True), 
                     optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=1e-3) if sys.platform == 'darwin' else tf.keras.optimizers.Adam(learning_rate=1e-3), 
                     metrics = ['accuracy'],
+                    monitor='val_accuracy',
                     patience = 5,
                     epochs = 10,
                     steps_per_epoch = None,
@@ -832,7 +836,7 @@ def compile_and_fit(model, train_data, val_data,
         #cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,save_weights_only=True,verbose=1)
 
     else:
-        callbacks = [tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', 
+        callbacks = [tf.keras.callbacks.EarlyStopping(monitor=monitor, 
                                                       mode='max', 
                                                       verbose=verbose,
                                                       restore_best_weights=True, 
