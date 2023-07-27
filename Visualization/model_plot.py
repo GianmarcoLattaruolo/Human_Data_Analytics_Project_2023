@@ -110,23 +110,17 @@ def plot_history(history):
     plt.subplot(1, 2, 1)
     plt.grid(True)
     plt.plot(100*np.array(history.history[keys[0]]), label=keys[0])
-    #plt.plot(100*np.array(history.history['accuracy']), label='accuracy')
     plt.plot(100*np.array(history.history[keys[2]]), label=keys[2])
-    #plt.plot(100*np.array(history.history['val_accuracy']), label='val_accuracy')
     plt.xlabel('Epoch')
-    plt.ylabel(keys[0] + ' [%]')
-    #plt.ylabel('Accuracy [%]')
+    plt.ylabel(keys[0])
     plt.legend()
 
     plt.subplot(1, 2, 2)
     plt.grid(True)
     plt.plot(history.history[keys[1]], label=keys[1])
-    #plt.plot(history.history['loss'], label='loss')
     plt.plot(history.history[keys[3]], label=keys[3])
-    #plt.plot(history.history['val_loss'], label='val_loss')
     plt.xlabel('Epoch')
     plt.ylabel(keys[1])
-    #plt.ylabel('Loss [CrossEntropy]')
     plt.legend()
     plt.show()
 
@@ -168,12 +162,90 @@ def visualize_the_weights(model, layer_name = None, layer_number = None, n_filte
         return None
     
 
-def plot_latent_space(encoder, test, y_test):
-    # display a 2D plot of the digit classes in the latent space
-    z_mean, _, _ = encoder.predict(test)
-    plt.figure(figsize=(12, 10))
-    plt.scatter(z_mean[:, 0], z_mean[:, 1], c=y_test, cmap='tab10')
-    plt.colorbar()
-    plt.xlabel("z[0]")
-    plt.ylabel("z[1]")
-    plt.show()
+def plot_latent_space(encoder, dataset, show_labels = "all", numeric_labels = False, verbose = False):
+    # encoder must be pre-trained 
+    # dataset must be a dataset train, val or test returned by create_dataset
+    # code_size must be 2 or 3, otherwise the plot will not be able to be displayed
+    # show_labels can be "all", a dict of pairs (numeric label/string label, 0 if we do not want to plot or 1 if we want to plot that label)
+    # show_labels can be incomplete (for example {0:1, 1:0, 2:1}), in this case the labels not present or with 0 value in the dict will not be plotted 
+    # Classes in ESC10 are [0:'rain', 1:'sea_waves', 2:'clock_tick', 3:'chainsaw', 4:'crying_baby', 5:'rooster', 6:'crackling_fire', 7:'dog', 8:'helicopter', 9:'sneezing']
+    # google_plot is a boolean, if True the plot will be displayed with plotly, if False the plot will be displayed with matplotlib
+
+    #defining the mapping dictionaries
+    lab = ['rain', 'sea_waves', 'clock_tick', 'chainsaw', 'crying_baby', 'rooster', 'crackling_fire', 'dog', 'helicopter', 'sneezing']
+    mapping_dict = dict(zip(lab, range(10)))
+    inverse_mapping_dict = dict(zip(range(10), [string.replace('_', ' ') for string in lab]))
+    
+    if show_labels=="all":
+        show_labels = dict.fromkeys(range(10), 1)
+    if type(show_labels)==dict:
+        #check if the keys of the dict are 'rain', 'sea_waves', 'clock_tick', 'chainsaw', 'crying_baby', 'rooster', 'crackling_fire', 'dog', 'helicopter', 'sneezing', in this case we need to convert the keys to numbers
+        if set(show_labels.keys()).issubset(set(lab)): #we use subset because we can have a dict with only some of the labels
+            show_labels = {mapping_dict[k]: v for k, v in show_labels.items()}
+        show_labels = {**show_labels, **{k: 0 for k in range(10) if k not in show_labels.keys()}} # out of the if because we want to add the 0 values also if the dict with numeric keys is incomplete
+
+    dataset_encoded = dataset.map(lambda y,lab: (encoder(y),lab))
+
+    #define the code_size
+    code_size = len(encoder(tf.zeros((1, 220500, 1)))[0])
+    
+    if code_size>3 or code_size<2:
+        print("code_size must be 2 or 3")
+        return
+
+    #create a list of encoded vectors and a list of labels
+    encoded_list = []
+    label_list = []
+
+    #unbatch the dataset
+    unbatched_encoded_dataset = dataset_encoded.unbatch()
+
+    #number of elements in the unbatched_dataset
+    num_elements = sum(1 for _ in unbatched_encoded_dataset)
+
+    for i,j in unbatched_encoded_dataset.take(num_elements):
+        encoded_list.append(np.array(i))
+        label_list.append(np.array(j))
+
+    #invert the one hot encoding of the label list
+    label_list = np.argmax(label_list, axis=1)
+
+    #create a dataframe with the encoded vectors and the labels
+    df = pd.DataFrame(encoded_list, columns=['x', 'y', 'z'][:code_size])
+    df['label'] = label_list
+
+    #remove the labels that has a 0 in show_labels
+    for i in show_labels:
+        if show_labels[i]==0:
+            df = df[df['label']!=i]
+    
+
+
+    #transform label to string with mapping dict where the keys are the string labels and the values are the numeric labels        
+    if not numeric_labels:
+        df['label'] = df['label'].map(inverse_mapping_dict)
+
+    #transform label to string required to have discrete legend in the plots
+    if numeric_labels:
+        df['label'] = df['label'].astype(str)
+
+    #plot the latent space
+    if code_size==2:
+        fig = px.scatter(df, x='x', y='y', color='label', opacity=1)
+        fig.show()
+
+    if code_size==3:
+        fig = px.scatter_3d(df, x='x', y='y', z='z', color='label', opacity=1)
+        fig.show()
+
+    if verbose:
+        #count how many examples we have for each label
+        print(df['label'].value_counts())
+
+    return
+
+'''
+example of use:
+plot_latent_space(encoder, train, show_labels = {0:1, 1:0, 2:1}, numeric_labels = False)
+plot_latent_space(encoder, train, show_labels = {'rain':1, 'sea_waves':0, 'chainsaw':1}, numeric_labels = True)
+'''
