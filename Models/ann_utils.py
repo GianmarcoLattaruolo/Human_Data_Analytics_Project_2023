@@ -841,6 +841,9 @@ def compile_and_fit(model, train_data, val_data,
                                                       verbose=verbose,
                                                       restore_best_weights=True, 
                                                       patience=patience)]
+        # OUTDATED
+        #add also tf.keras.callbacks.TensorBoard(log_dir='/tmp/autoencoder') if I runned !tensorboard --logdir=/tmp/autoencoder
+        
     
     history = model.fit(train_data,
                         epochs=epochs,
