@@ -1,6 +1,6 @@
 *.zip
 *.ogg
-**/data/ESC-US
+**/Data/ESC-US
 **/info_files
 **Models/__pycache__/
 **Preprocessing/__pycache__/
@@ -8,9 +8,7 @@ AE/cartoonset10k.tgz
 AE/cartoonset100k.tgz
 **AE/cartoonset100k
 **/data/ESC-US-converted
-info_files/
 Cached_Datasets/*
-!Cached_datasets/quelli buoni ancora da inserire
 Saved_Datasets/
 Saved_Models/
 main_notebook_pre_cross_validation.ipynb
@@ -18,3 +16,4 @@ history_supervised.json
 vscode/*
 __pycache__/*
 .DS_Store
+Visualization/__pycache__
