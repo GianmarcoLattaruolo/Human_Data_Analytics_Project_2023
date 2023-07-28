@@ -39,7 +39,6 @@ def one_random_audio(main_dir):
 
     return y, sr
 
-
 def plot_clip_overview(df, sample_rate=44100, segment=25, overlapping=10, column=5, preprocessing='stft'):
 
     segment_samples = round(sample_rate * segment / 1000)  # Calculate the number of samples per segment
@@ -80,7 +79,6 @@ def plot_clip_overview(df, sample_rate=44100, segment=25, overlapping=10, column
                 plt.colorbar()
                 
     plt.show()
-
 
 def Spectral_Analysis(audio,
                       sample_rate = 44100,
