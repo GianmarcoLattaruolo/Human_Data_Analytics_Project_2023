@@ -20,10 +20,11 @@ from sklearn.metrics import make_scorer
 from sklearn.metrics import RocCurveDisplay, precision_recall_curve, PrecisionRecallDisplay
 from sklearn.metrics import precision_recall_fscore_support, auc
 from sklearn.model_selection import GridSearchCV
+import keras_tuner as kt
 
 
 
-
+#class from course laboratories
 class ModelSaveCallback(tf.keras.callbacks.Callback):
 
     def __init__(self, file_name):
@@ -34,6 +35,67 @@ class ModelSaveCallback(tf.keras.callbacks.Callback):
         save_model(self.model, self.file_name)
         print(f"Epoch {epoch} - Model saved in {self.file_name}")
 
+#class to compute the delta and delta_delta inside a layer
+class MFCCWithDeltaLayer(tf.keras.layers.Layer):
+    def __init__(self, n_mfcc=40, order=2, **kwargs):
+        super(MFCCWithDeltaLayer, self).__init__(**kwargs)
+        self.n_mfcc = n_mfcc
+        self.order = order
+
+    def call(self, inputs):
+        # Extract the MFCC matrix
+        mfcc = inputs
+        
+        # Calculate the first-order Mel cepstral coefficients (delta)
+        padded_mfcc = tf.pad(mfcc, paddings=[[0, 0], [1, 1], [0, 0]])
+        delta_mfcc = (padded_mfcc[:, 2:] - padded_mfcc[:, :-2]) / 2.0
+        
+        # Optionally, calculate the second-order Mel cepstral coefficients (delta-delta)
+        if self.order == 2:
+            padded_delta_mfcc = tf.pad(delta_mfcc, paddings=[[0, 0], [1, 1], [0, 0]])
+            delta_delta_mfcc = (padded_delta_mfcc[:,2:] - padded_delta_mfcc[:,:-2]) / 2.0
+
+        # Concatenate the delta coefficient to the original MFCC matrix
+        mfcc_with_delta = tf.concat([mfcc, delta_mfcc], axis=-1)
+        
+        # Optionally, concatenate the delta-delta coefficient
+        if self.order == 2:
+            mfcc_with_delta = tf.concat([mfcc_with_delta, delta_delta_mfcc], axis=-1)
+        
+        return mfcc_with_delta
+
+    def get_config(self):
+        config = super(MFCCWithDeltaLayer, self).get_config()
+        config.update({'n_mfcc': self.n_mfcc, 'order': self.order})
+        return config
+
+#class to cut the output of a model in the last layer
+class OutputCutterLayer(tf.keras.layers.Layer):
+    def __init__(self, desired_shape, **kwargs):
+        super(OutputCutterLayer, self).__init__(**kwargs)
+        self.desired_shape = desired_shape
+
+    def call(self, inputs):
+        #input_shape = tf.shape(inputs)
+        input_shape = tuple(inputs.shape)
+        # Cut the input tensor if it is larger than the desired shape
+        output = inputs[:, :self.desired_shape[1], :self.desired_shape[2]]
+
+        # Compute the amount of padding required
+        rows_to_pad = self.desired_shape[1] - input_shape[1]
+        cols_to_pad = self.desired_shape[2] - input_shape[2]
+
+        # Pad the output tensor with zeros if necessary
+        if rows_to_pad > 0 or cols_to_pad > 0:
+            paddings = tf.constant([[0, 0], [0, rows_to_pad], [0, cols_to_pad]])
+            output = tf.pad(output, paddings, mode='CONSTANT', constant_values=0.0)     
+            
+        return output
+
+    def get_config(self):
+        config = super(OutputCutterLayer, self).get_config()
+        config.update({'desired_shape': self.desired_shape})
+        return config
 
 @tf.autograph.experimental.do_not_convert
 def create_dataset(subfolder_path, # folder of the audio data we want to import
@@ -490,6 +552,7 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
         else:
             return train, val, test
 
+#QUI RESIZE ENTRA IN CONFLITTO CON FIND MAX LAZY, C'E' ANCHE DA AGGIUSTARE IL RETURN NEL CASO DI LOAD DATASET
 @tf.autograph.experimental.do_not_convert
 def create_dataset_lite(data_frame = None,
                         labeled = True,
@@ -942,3 +1005,138 @@ def count_parameters(model):
     non_trainable_params = sum(tf.keras.backend.count_params(p) for p in model.non_trainable_variables)
     total_params = trainable_params + non_trainable_params
     return total_params
+
+
+def build_tuner(build_model, # A function that takes hyperparameters as inputs and returns a Keras model to be optimized.
+                hpo_method, # A string specifying the HPO method to use. Options: "RandomSearch", "Hyperband", "BayesianOptimization".
+                max_model_size, # Maximum allowed model size in terms of trainable parameters.
+                dir_name, # Directory path where the tuner's results and checkpoints will be stored.
+                objective, #  The objective to be optimized during HPO. It can be a Keras Tuner `Objective` or a custom function.
+                not_fixed_param='', # A string specifying a hyperparameter (if any) that will not be tuned in this search. Default is None.
+                hp=None, # A Keras Tuner `HyperParameters` instance that specifies the hyperparameters to be tuned in the search. Default is None.
+                overwrite=True, # Boolean flag indicating whether to overwrite previous results in the directory or resume the previous search. Default is True.
+                max_trials=4, # Maximum number of hyperparameter configurations to test during the HPO process. Default is 4.
+                seed=42, # Seed for reproducibility. Default is 42.
+                max_consecutive_failed_trials=50, # Maximum number of consecutive failed trials before the search stops. Default is 5.
+                executions_per_trial=1, # Number of times to train the model for each hyperparameter configuration. Default is 1 (single round of training).
+                tune_new_entries=True # Boolean flag indicating whether to allow tuning unlisted parameters. Default is True.
+                ):
+    """
+    Returns:
+        tuner: A Keras Tuner instance corresponding to the specified HPO method, with the specified hyperparameters and objective.
+    """
+
+    if hp is None:
+        name_params = '_full'
+    else:
+        name_params = '_' + not_fixed_param
+
+    if hpo_method == "RandomSearch":
+        # Using Random Search strategy for HPO
+        print(f'Using Random Search strategy for HPO')
+        tuner = kt.RandomSearch(hypermodel=build_model,
+                                hyperparameters=hp,  # Decide which hyperparameters to tune.
+                                tune_new_entries=tune_new_entries,  # If False prevents unlisted parameters from being tuned.
+                                objective=objective,
+                                directory=dir_name,
+                                overwrite=overwrite,
+                                project_name=hpo_method + name_params,
+                                max_trials=max_trials,
+                                seed=seed,
+                                max_model_size=max_model_size,
+                                executions_per_trial=executions_per_trial,
+                                max_consecutive_failed_trials=max_consecutive_failed_trials
+                                )
+    elif hpo_method == "Hyperband":
+        # Using Hyperband strategy for HPO
+        print(f'Using Hyperband strategy for HPO')
+        tuner = kt.Hyperband(hypermodel=build_model,
+                             objective=objective,
+                             max_epochs=10,  # Maximum number of epochs for each configuration in Hyperband.
+                             factor=3,  # Reduction factor to determine the number of configurations at each stage.
+                             directory=dir_name,
+                             overwrite=overwrite,
+                             project_name=hpo_method + name_params,
+                             seed=seed,
+                             max_model_size=max_model_size,
+                             executions_per_trial=executions_per_trial,
+                             hyperparameters=hp,  # Decide which hyperparameters to tune.
+                             tune_new_entries=tune_new_entries,  # If False prevents unlisted parameters from being tuned.
+                             max_consecutive_failed_trials=max_consecutive_failed_trials
+                             )
+
+    elif hpo_method == "BayesianOptimization":
+        # Using Bayesian Optimization strategy for HPO
+        print(f'Using Bayesian Optimization strategy for HPO')
+        tuner = kt.BayesianOptimization(hypermodel=build_model,
+                                        objective=objective,
+                                        max_trials=max_trials,  # Maximum candidates to test.
+                                        directory=dir_name,
+                                        overwrite=overwrite,
+                                        project_name=hpo_method + name_params,
+                                        seed=seed,
+                                        max_model_size=max_model_size,
+                                        executions_per_trial=executions_per_trial,
+                                        hyperparameters=hp,  # Decide which hyperparameters to tune.
+                                        tune_new_entries=tune_new_entries,  # If False prevents unlisted parameters from being tuned.
+                                        max_consecutive_failed_trials=max_consecutive_failed_trials
+                                        )
+
+    return tuner
+
+
+# little function
+def num(i):
+    if i<10:
+        return '0'+str(i)
+    else:
+            return str(i)
+    
+    
+#since we are going to use this several times we define a practical function
+def create_US_dataset(
+        preprocessing,
+        folder_number,
+        main_dir,
+        batch_size=128,
+        ndim = 3
+    ):
+    # create a dataset of spectrograms from the ESC-US dataset folder 1, resized
+    path_to_ogg_files = os.path.join(main_dir,'data', 'ESC-US', num(folder_number))
+    num_files = len(os.listdir(path_to_ogg_files))
+    start_time = time.time()
+
+    if preprocessing is not None:
+        resize = True 
+
+        # WE SHOULD SPECIFY THE ndim OF THE SAVED DATASET
+        save_train_file = os.path.join(main_dir,'Saved_Datasets','US_'+num(folder_number)+'_'+preprocessing+'_train_ndim3_resized')
+        save_test_file = os.path.join(main_dir,'Saved_Datasets','US_'+num(folder_number)+'_'+preprocessing+'_test_ndim3_resized')
+        save_val_file = os.path.join(main_dir,'Saved_Datasets','US_'+num(folder_number)+'_'+preprocessing+'_val_ndim3_resized')
+        normalize = True
+    else:
+        #raw audio datsets are too big to save them
+        resize = False
+        save_train_file = None
+        save_test_file = None
+        save_val_file = None
+        normalize = False
+        
+    #create and save the dataset
+    train, val, test, INPUT_DIM = create_dataset(path_to_ogg_files,
+                                        batch_size=batch_size,
+                                        verbose = 0,
+                                        labels = None, #must specify this for unsupervised learning
+                                        preprocessing=preprocessing,
+                                        show_example_batch = True,
+                                        ndim = ndim,
+                                        save_train = save_train_file, # non so perchè ma con l'unlabbeled non funziona
+                                        save_test = save_test_file,
+                                        save_val = save_val_file,
+                                        transpose=False,
+                                        resize = resize,
+                                        normalize = normalize
+                                        )
+    print(f'Create the dataset with {num_files} files requires {round(time.time()-start_time,2)} seconds.')
+    
+    return train, val, test, INPUT_DIM

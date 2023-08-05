@@ -17,3 +17,7 @@ vscode/*
 __pycache__/*
 .DS_Store
 Visualization/__pycache__
+Conv_AE_flatten_code/
+Dense_AE_ffnn/
+Fully_Convolutional_AE/
+1Dim_Conv_AE_ffnn/

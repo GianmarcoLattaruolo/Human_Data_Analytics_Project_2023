@@ -247,3 +247,58 @@ example of use:
 plot_latent_space(encoder, train, show_labels = {0:1, 1:0, 2:1}, numeric_labels = False)
 plot_latent_space(encoder, train, show_labels = {'rain':1, 'sea_waves':0, 'chainsaw':1}, numeric_labels = True)
 '''
+
+
+def plot_original_reconstructed(model, n_figures, test):
+
+    # function to plot the images (STFT, MEL or MFCC) and the reconstructed images
+    # model : the autoencoder model
+    # n_figures: how many images to plot
+    # test: the test dataset
+    n=n_figures
+    plt.figure(figsize=(10, 15))
+    for index, (image, copy) in zip(range(1, n + 1), test.unbatch().shuffle(buffer_size = n+1).take(n)):
+
+        ax = plt.subplot(n, 2, 2*index-1)
+        plt.imshow(image.numpy(),  cmap = 'viridis')
+        plt.title('Original')
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+        reconstructed = model.predict(np.expand_dims(image, axis=0))
+        reconstructed = reconstructed.reshape(64,128,1)
+        ax = plt.subplot(n, 2, 2*index)
+        plt.imshow(reconstructed,  cmap = 'viridis')
+        plt.title('Reconstructed')
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+    return plt.show()
+
+
+def plot_original_reconstructed_raw(model, test, n_figures = 5):
+
+    n=n_figures
+    plt.figure(figsize=(10, 3*n))
+    for index, (audio, copy) in zip(range(1, n + 1), test.unbatch().shuffle(buffer_size = n+1).take(n)):
+        samplerate = 44100
+        display(ipd.Audio(data = audio.numpy().reshape(220500), rate=samplerate))
+        reconstructed = model.predict(np.expand_dims(audio, axis=0))
+        display(ipd.Audio(data = reconstructed.reshape(220500), rate=samplerate) )
+
+        ax = plt.subplot(n, 2, 2*index-1)
+        plt.plot(audio.numpy())
+        plt.title('Original')
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+        reconstructed = model.predict(np.expand_dims(audio, axis=0), verbose=0)
+        ax = plt.subplot(n, 2, 2*index)
+        plt.plot(reconstructed.reshape(220500))
+        plt.title('Reconstructed')
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+    return plt.show()
+
+
