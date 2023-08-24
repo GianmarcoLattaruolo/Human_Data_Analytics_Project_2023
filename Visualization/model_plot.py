@@ -105,24 +105,36 @@ def listen_to_wrong_audio(data_frame, true_labels, predicted_labels, labels, con
 
 def plot_history(history):
     keys = list(history.history.keys())
-    plt.figure(figsize=(14, 5))
-    
-    plt.subplot(1, 2, 1)
-    plt.grid(True)
-    plt.plot(100*np.array(history.history[keys[0]]), label=keys[0])
-    plt.plot(100*np.array(history.history[keys[2]]), label=keys[2])
-    plt.xlabel('Epoch')
-    plt.ylabel(keys[0])
-    plt.legend()
 
-    plt.subplot(1, 2, 2)
-    plt.grid(True)
-    plt.plot(history.history[keys[1]], label=keys[1])
-    plt.plot(history.history[keys[3]], label=keys[3])
-    plt.xlabel('Epoch')
-    plt.ylabel(keys[1])
-    plt.legend()
-    plt.show()
+    if keys[1] != 'mse':
+        plt.figure(figsize=(14, 5))
+        
+        plt.subplot(1, 2, 1)
+        plt.grid(True)
+        plt.plot(100*np.array(history.history[keys[0]]), label=keys[0])
+        plt.plot(100*np.array(history.history[keys[2]]), label=keys[2])
+        plt.xlabel('Epoch')
+        plt.ylabel(keys[0])
+        plt.legend()
+
+        plt.subplot(1, 2, 2)
+        plt.grid(True)
+        plt.plot(history.history[keys[1]], label=keys[1])
+        plt.plot(history.history[keys[3]], label=keys[3])
+        plt.xlabel('Epoch')
+        plt.ylabel(keys[1])
+        plt.legend()
+        plt.show()
+    
+    else: 
+        plt.figure(figsize=(7, 5))
+        plt.grid(True)
+        plt.plot(history.history[keys[0]], label=keys[0])
+        plt.plot(history.history[keys[2]], label=keys[2])
+        plt.xlabel('Epoch')
+        plt.ylabel(keys[1])
+        plt.legend()
+        plt.show()
 
 
 def visualize_the_weights(model, layer_name = None, layer_number = None, n_filters = 16, verbose = 1):

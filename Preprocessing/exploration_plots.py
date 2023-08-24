@@ -39,7 +39,7 @@ def one_random_audio(main_dir):
 
     return y, sr
 
-def plot_clip_overview(df, sample_rate=44100, segment=25, overlapping=10, column=5, preprocessing='stft'):
+def plot_clip_overview(df, sample_rate=44100, segment=25, overlapping=10, column=5, preprocessing='STFT'):
 
     segment_samples = round(sample_rate * segment / 1000)  # Calculate the number of samples per segment
     overlap_samples = round(sample_rate * overlapping / 1000)
@@ -57,7 +57,7 @@ def plot_clip_overview(df, sample_rate=44100, segment=25, overlapping=10, column
         for i, audio_sample in enumerate(paths):
             data, samplerate = librosa.load(audio_sample, sr=44100)
             
-            if preprocessing == 'stft':
+            if preprocessing == 'STFT':
                 # STFT transformation
                 D = librosa.stft(data, win_length=segment_samples, hop_length=overlap_samples)
                 S_db = librosa.amplitude_to_db(np.abs(D), ref=np.max)
@@ -67,7 +67,7 @@ def plot_clip_overview(df, sample_rate=44100, segment=25, overlapping=10, column
                 librosa.display.specshow(S_db)
                 #plt.colorbar(format='%+2.0f dB')
                 
-            elif preprocessing == 'mfcc':
+            elif preprocessing == 'MFCC':
                 # MFCC transformation
                 mfccs = librosa.feature.mfcc(y=data, sr=samplerate, n_mfcc=13)
                 max = np.max(np.abs(mfccs))
@@ -77,6 +77,16 @@ def plot_clip_overview(df, sample_rate=44100, segment=25, overlapping=10, column
                 plt.title(audio_type)
                 librosa.display.specshow(mfccs)
                 plt.colorbar()
+
+            elif preprocessing == 'MEL':
+                # MEL transformation
+                D = librosa.feature.melspectrogram(y = data, win_length=segment_samples, hop_length=overlap_samples, sr = sample_rate)
+                M_db = librosa.power_to_db(D, ref=np.max)
+                
+                plt.subplot(row,column,j*column+i+1)
+                plt.title(audio_type)
+                librosa.display.specshow(M_db)
+                #plt.colorbar(format='%+2.0f dB')
                 
     plt.show()
 

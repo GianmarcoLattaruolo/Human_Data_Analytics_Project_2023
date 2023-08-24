@@ -132,7 +132,7 @@ def build_dataset(df, subset = False, num_classes = 10):
 
 # implement some very time expensive gris search for basic machine learning models and save the result in a file.txt
 def basic_ML_experiments_gridsearch(dataset, #numpy array with the raw audio loaded
-                                    target,  #numoy vector with target classes
+                                    target,  #numpy vector with target classes
                                     test_size = 0.25, #test ratio from the total
                                     file = r'Models\grid_search_results.txt', #file were save the result
                                     cv=3, 
@@ -247,7 +247,6 @@ def basic_ML_experiments_gridsearch(dataset, #numpy array with the raw audio loa
             #clf_pipe.get_params() #uncomment this to see all the parameters
             verb = 3 
 
-        
         start_time = time.time()
         clf = GridSearchCV(clf_pipe, param_grid, n_jobs=None, cv = cv, verbose = verb)
         clf.fit(X_train, y_train)

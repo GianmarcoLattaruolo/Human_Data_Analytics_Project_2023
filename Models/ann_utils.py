@@ -534,8 +534,6 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
             print("Saving the labels...")
         label_names = save_dataset(label_names, save_labels)
     
-
-
     #Several return statements depending on the needs
     if labels is not None:
         if show_example_batch:
@@ -638,6 +636,7 @@ def create_dataset_lite(data_frame = None,
             return r
 
     def find_max_lazy(dataset, labels = labeled, verbose = verbose):
+            '''
             max = 0
             lazy_number = 4
             if labels:
@@ -653,9 +652,10 @@ def create_dataset_lite(data_frame = None,
                     if new > max:
                         max = new
                 if verbose > 0:
-                    print(f'The max value is {max}')            
-            
-            return max, audio.numpy()
+                    print(f'The max value is {max}')  
+            '''        
+            return 1, None 
+            #return max.numpy(), audio.numpy()
 
     def save_dataset(dataset, save_file):
         if save_file:
@@ -743,6 +743,7 @@ def create_dataset_lite(data_frame = None,
         
     #normalization
     max, example_audio = find_max_lazy(dataset)
+
     if labeled:
         dataset = dataset.map(lambda audio, label: (audio/max, label), num_parallel_calls=tf.data.AUTOTUNE, deterministic = False)
     else:
@@ -767,7 +768,7 @@ def create_dataset_lite(data_frame = None,
     dataset = dataset.cache(filename = cache_file)
     #dataset = dataset.shuffle(dataset.cardinality().numpy(), reshuffle_each_iteration=True)
     dataset = dataset.batch(batch_size)
-    dataset = dataset.prefetch(tf.data.AUTOTUNE)
+    dataset = dataset.prefetch(tf.data.AUTOTUNE) 
     if labeled is not None:
         return dataset, labels
 
@@ -842,7 +843,7 @@ def K_fold_training(dataset, build_model,
 
     #build the keras-sklearn regressor
     #temp_params = {key_param:params[key_params][0] for key_param in params.keys()}
-    model = KerasClassifier( model = build_model, epochs = epochs, verbose = verbose, callbacks = [callbacks_loss,callback_acc], **params)
+    model = KerasClassifier(model = build_model, epochs = epochs, verbose = verbose, callbacks = [callbacks_loss,callback_acc], **params)
     
     def my_custom_loss_func(y_true, y_pred, verbose = verbose):
         y_pred = np.argmax(y_pred, axis=1)
@@ -856,9 +857,10 @@ def K_fold_training(dataset, build_model,
     grid_search = GridSearchCV(estimator = model, param_grid = params, cv=K, verbose=verbose, scoring = score, refit=False)
 
     #extract X and y from the dataset
-    X = np.concatenate([x for x, y in dataset], axis =0)
+    X = np.concatenate([x for x, y in dataset], axis=0)
+    print(X.shape)
     y = np.concatenate([y for x, y in dataset], axis=0)
-
+    print(y.shape)
 
     #train a k-fold cross validation
     model_cv = grid_search.fit(X, y)
@@ -869,6 +871,8 @@ def K_fold_training(dataset, build_model,
     if verbose > 0:
         print(f'The best parameters are {best_params}')
         print(f'The accuracy score are')
+
+    result = result.sort_values(by='mean_accuracy', ascending=False)
     
     display(result)
 
@@ -903,9 +907,6 @@ def compile_and_fit(model, train_data, val_data,
                                                       verbose=verbose,
                                                       restore_best_weights=True, 
                                                       patience=patience)]
-        # OUTDATED
-        #add also tf.keras.callbacks.TensorBoard(log_dir='/tmp/autoencoder') if I runned !tensorboard --logdir=/tmp/autoencoder
-        
     
     history = model.fit(train_data,
                         epochs=epochs,
@@ -913,7 +914,7 @@ def compile_and_fit(model, train_data, val_data,
                         callbacks=callbacks,
                         steps_per_epoch = steps_per_epoch,
                         verbose=verbose)
-    return model,history
+    return model, history
 
 @tf.autograph.experimental.do_not_convert
 def compile_fit_evaluate(data_frame, model, train, val, test, label_names=None,
