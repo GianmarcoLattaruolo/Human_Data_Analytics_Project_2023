@@ -176,6 +176,57 @@ def reshape_US(num_files):
     return
 
 
+def reshape_US_leo(num_files):
+    def num(i):
+        if i<10:
+            return '0'+str(i)
+        else:
+            return str(i)
+
+    path_us =  os.path.join(main_dir,'data', 'ESC-US')
+    folders = [os.path.join(main_dir, 'data', 'ESC-US',i) for i in os.listdir(path_us) if i not in ['.ipynb_checkpoints','.DS_Store']]
+    total_files = sum([len(os.listdir(i)) for i in folders])
+    folders_final = total_files//num_files + 1*(len(folders)%num_files!=0)
+
+    # create the new folders
+    final_folders_list = []
+    for i in range(folders_final):
+        folder = os.path.join(main_dir, 'data', 'ESC-US',num(i+1)+'_final_bis')
+        if not os.path.exists(folder):
+            os.mkdir(folder)
+        final_folders_list.append(folder)
+
+    full_list_of_files = [[os.path.join(main_dir, 'data', 'ESC-US',folder,i) for i in os.listdir(folder) ] for folder in folders] #if i[-3:]=='ogg'fa sparire alcuni files
+    full_list_of_files = [i for j in full_list_of_files for i in j]
+
+    for n, file in enumerate(full_list_of_files):
+        i = n // num_files
+        
+        target_dir = os.path.join(main_dir, 'data', 'ESC-US', num(i+1) + '_final_bis')
+        os.makedirs(target_dir, exist_ok=True)
+        
+        target_path = os.path.join(target_dir, os.path.basename(file))
+        shutil.move(file, target_path)
+        
+        if n % 1000 == 0:
+            total_files = len(full_list_of_files)
+            print(f'Moved file {n}-th of {total_files}')
+
+    #delete the previous empty folders
+    for folder in folders:
+        shutil.rmtree(folder)
+
+    #check if there are empty folder in os.path.join(main_dir, 'data', 'ESC-US')
+    for folder in os.listdir(os.path.join(main_dir, 'data', 'ESC-US')):
+        if os.path.isdir(os.path.join(main_dir, 'data', 'ESC-US', folder)):
+            if len(os.listdir(os.path.join(main_dir, 'data', 'ESC-US', folder)))==0:
+                shutil.rmtree(os.path.join(main_dir, 'data', 'ESC-US', folder))
+
+    #rename the new folders to cancel _final
+    for i,folder in enumerate(final_folders_list):
+        os.rename(folder, os.path.join(main_dir, 'data', 'ESC-US',num(i+1)))
+
+
 def download_dataset(name,make_subfold = False):
     if not os.path.exists(f'./data'):
         os.mkdir('data')
