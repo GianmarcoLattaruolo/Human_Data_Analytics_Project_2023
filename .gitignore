@@ -10,7 +10,6 @@ AE/cartoonset100k.tgz
 **/data/ESC-US-converted
 Cached_Datasets/*
 Saved_Datasets/
-Saved_Models/
 main_notebook_pre_cross_validation.ipynb
 history_supervised.json
 vscode/*

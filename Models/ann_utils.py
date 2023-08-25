@@ -12,7 +12,7 @@ import random
 import time
 import importlib
 importlib.reload(importlib.import_module('Visualization.model_plot'))
-from Visualization.model_plot import plot_history, confusion_matrix, listen_to_wrong_audio
+from Visualization.model_plot import *
 from tensorflow.keras.models import save_model # from labs
 from scikeras.wrappers import KerasClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_curve
@@ -125,6 +125,7 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
                    ): 
                    # INPUT: str - path of the audio directory 
                    # OUTPUT: train, validation, test set as tensorflow dataset
+
     if save_labels is not None:
         save_labels = save_labels + '.txt'
 
@@ -152,7 +153,6 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
             elif os.path.exists(save_train) or os.path.exists(save_test) or os.path.exists(save_val) or os.path.exists(save_labels):
                 print("You have just some of the files saved, not all of them")
                 print("Proceding with normal dataset building.")
-
     else:
         if save_train is not None and save_test is not None and save_val is not None:
             if os.path.exists(save_train) and os.path.exists(save_test) and os.path.exists(save_val):
@@ -1124,6 +1124,7 @@ def create_US_dataset(
         normalize = False
         
     #create and save the dataset
+    print(f'Creating the dataset from folder {num(folder_number)}')
     train, val, test, INPUT_DIM = create_dataset(path_to_ogg_files,
                                         batch_size=batch_size,
                                         verbose = 0,
@@ -1141,3 +1142,70 @@ def create_US_dataset(
     print(f'Create the dataset with {num_files} files requires {round(time.time()-start_time,2)} seconds.')
     
     return train, val, test, INPUT_DIM
+
+
+def US_training(AE_name, autoencoder, n_folders, epochs = 50, preprocessing = None, patience=10 ):
+
+    #paramteres for the fit and callbacks
+    metrics = ['mse']
+    callbacks = [tf.keras.callbacks.EarlyStopping(monitor='val_'+metrics[0],
+                                                mode='max',
+                                                verbose=verbose,
+                                                restore_best_weights=True,
+                                                patience=patience)]
+
+    #read the file txt to know the folder to start 
+    with open(os.path.join(main_dir,'Saved_Models',AE_name+'_count.txt'), 'r') as file:
+        last_folder = int(file.read())
+        print(f'Last folder trained: {last_folder}')
+
+    if n_folders < last_folder:
+        print('The number of folders is smaller than the last folder trained!')
+        n_folders = last_folder
+
+    for i in range(last_folder+1,n_folders+1):
+
+        #load the model if i > 1
+        if i>1:
+            autoencoder = tf.keras.models.load_model(os.path.join(main_dir,'Saved_Models',AE_name))
+
+        #create the dataset
+        train, val, test, INPUT_DIM =  create_US_dataset(folder_number=i,
+                                                        preprocessing = preprocessing,
+                                                        ndim = 2,
+                                                        main_dir = main_dir,
+                                                        )
+
+        #fit the autoencoder
+        history = autoencoder.fit(train, validation_data= val, epochs=epochs, callbacks = callbacks, verbose=0)
+
+        #save the model
+        autoencoder.save(os.path.join(main_dir,'Saved_Models',AE_name), save_format  ='keras')
+
+        #show the best epoch
+        val_acc_per_epoch = history.history['val_mse']
+        best_epoch = val_acc_per_epoch.index(max(val_acc_per_epoch)) + 1
+        print('Best epoch: %d' % (best_epoch,))
+
+        #plot the history of the training
+        plot_history(history)
+
+        #evaluate the model on the test set
+        scores = autoencoder.evaluate(test, return_dict=False)
+        display(scores)
+
+        # retrive the size of the model
+        print(get_model_size(autoencoder), 'MB')
+
+        # plot original and reconstructed images
+        try:
+            plot_original_reconstructed_raw(model = autoencoder, n_figures = 1, test=test)
+        except:
+            plot_original_reconstructed(model = autoencoder, n_figures = 1, test=test)
+
+        #update the number on the txt file overwritting the previous one
+        with open(os.path.join(main_dir,'Saved_Models',AE_name+'_count.txt'), 'w') as file:
+            file.write(str(i))
+
+    return autoencoder
+
