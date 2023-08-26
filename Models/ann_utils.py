@@ -1103,7 +1103,7 @@ def create_US_dataset(
         ndim = 3
     ):
     # create a dataset of spectrograms from the ESC-US dataset folder 1, resized
-    path_to_ogg_files = os.path.join(main_dir,'data', 'ESC-US', num(folder_number))
+    path_to_ogg_files = os.path.join(main_dir,'Data', 'ESC-US', num(folder_number))
     num_files = len(os.listdir(path_to_ogg_files))
     start_time = time.time()
 
@@ -1143,7 +1143,8 @@ def create_US_dataset(
     
     return train, val, test, INPUT_DIM
 
-
+verbose=0
+main_dir = os.getcwd()
 def US_training(AE_name, autoencoder, n_folders, epochs = 50, preprocessing = None, patience=10 ):
 
     #paramteres for the fit and callbacks
@@ -1195,13 +1196,7 @@ def US_training(AE_name, autoencoder, n_folders, epochs = 50, preprocessing = No
         display(scores)
 
         # retrive the size of the model
-        print(get_model_size(autoencoder), 'MB')
-
-        # plot original and reconstructed images
-        try:
-            plot_original_reconstructed_raw(model = autoencoder, n_figures = 1, test=test)
-        except:
-            plot_original_reconstructed(model = autoencoder, n_figures = 1, test=test)
+        print(f"This model has a size of {get_model_size(autoencoder)} MB")
 
         #update the number on the txt file overwritting the previous one
         with open(os.path.join(main_dir,'Saved_Models',AE_name+'_count.txt'), 'w') as file:
