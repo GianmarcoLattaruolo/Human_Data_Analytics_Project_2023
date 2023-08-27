@@ -1100,7 +1100,8 @@ def create_US_dataset(
         folder_number,
         main_dir,
         batch_size=128,
-        ndim = 3
+        ndim = 3,
+        verbose = 0
     ):
     # create a dataset of spectrograms from the ESC-US dataset folder 1, resized
     path_to_ogg_files = os.path.join(main_dir,'Data', 'ESC-US', num(folder_number))
