@@ -1139,13 +1139,21 @@ def create_US_dataset(
                                         resize = resize,
                                         normalize = normalize
                                         )
-    print(f'Create the dataset with {num_files} files requires {round(time.time()-start_time,2)} seconds.')
+    if verbose > 0:
+        print(f'Create the dataset with {num_files} files requires {round(time.time()-start_time,2)} seconds.')
     
     return train, val, test, INPUT_DIM
 
 verbose=0
 main_dir = os.getcwd()
-def US_training(AE_name, autoencoder, n_folders, epochs = 50, preprocessing = None, patience=10 ):
+def US_training(AE_name, 
+                autoencoder, 
+                n_folders, 
+                epochs = 50, 
+                preprocessing = None, 
+                patience=10 , 
+                ndim = 2,
+                verbose = 0):
 
     #paramteres for the fit and callbacks
     metrics = ['mse']
@@ -1173,27 +1181,31 @@ def US_training(AE_name, autoencoder, n_folders, epochs = 50, preprocessing = No
         #create the dataset
         train, val, test, INPUT_DIM =  create_US_dataset(folder_number=i,
                                                         preprocessing = preprocessing,
-                                                        ndim = 2,
+                                                        ndim = ndim,
                                                         main_dir = main_dir,
+                                                        verbose = verbose
                                                         )
 
         #fit the autoencoder
         history = autoencoder.fit(train, validation_data= val, epochs=epochs, callbacks = callbacks, verbose=0)
 
         #save the model
+        if preprocessing is None:
+            preprocessing = ''
         autoencoder.save(os.path.join(main_dir,'Saved_Models',AE_name), save_format  ='keras')
 
         #show the best epoch
         val_acc_per_epoch = history.history['val_mse']
         best_epoch = val_acc_per_epoch.index(max(val_acc_per_epoch)) + 1
-        print('Best epoch: %d' % (best_epoch,))
+        if verbose > 0:
+            print('Best epoch: %d' % (best_epoch,))
 
-        #plot the history of the training
-        plot_history(history)
+            #plot the history of the training
+            plot_history(history)
 
-        #evaluate the model on the test set
-        scores = autoencoder.evaluate(test, return_dict=False)
-        display(scores)
+            #evaluate the model on the test set
+            scores = autoencoder.evaluate(test, return_dict=False)
+            display(scores)
 
         # retrive the size of the model
         print(f"This model has a size of {get_model_size(autoencoder)} MB")

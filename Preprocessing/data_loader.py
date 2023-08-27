@@ -15,11 +15,11 @@ import random
 
 
 def load_metadata(main_dir, heads = True, statistics = False, audio_listen = False, ESC50=True, ESC10=True, ESC_US=False):
-    dir_path = os.path.join(main_dir, 'data', 'ESC-50')
+    dir_path = os.path.join(main_dir, 'Data', 'ESC-50')
     audio_files = [os.path.join(dir_path, i) for i in os.listdir(dir_path)]
 
     #load and explore the metadata
-    file_path = os.path.join(main_dir, 'data', 'meta', 'esc50.csv')
+    file_path = os.path.join(main_dir, 'Data', 'meta', 'esc50.csv')
     
     if ESC50:
         df_ESC50 = pd.read_csv(file_path)
@@ -74,8 +74,8 @@ def load_metadata(main_dir, heads = True, statistics = False, audio_listen = Fal
             display(IPython.display.Audio(data = data, rate=samplerate)  )
 
     if ESC_US:
-        file_path = os.path.join(main_dir, 'data', 'meta', 'ESC-US.csv') #this csv file is useless since has no reference to the files
-        ESC_US_paths = os.path.join(main_dir,'data','ESC-US')
+        file_path = os.path.join(main_dir, 'Data', 'meta', 'ESC-US.csv') #this csv file is useless since has no reference to the files
+        ESC_US_paths = os.path.join(main_dir,'Data','ESC-US')
         tot = len(os.listdir(ESC_US_paths))
         df_ESC_US = pd.DataFrame(columns=['filename','full_path'])
 
@@ -108,11 +108,11 @@ def load_metadata(main_dir, heads = True, statistics = False, audio_listen = Fal
 def make_subfolders(main_dir, df):
     if 'category' in df.columns:
         if len(set(df.category))==50:
-            data_dir = os.path.join(main_dir,'data','ESC-50-depth')
+            data_dir = os.path.join(main_dir,'Data','ESC-50-depth')
             if not os.path.isdir(data_dir):
                 os.mkdir(data_dir)
         else:
-            data_dir = os.path.join(main_dir,'data','ESC-10-depth')
+            data_dir = os.path.join(main_dir,'Data','ESC-10-depth')
             if not os.path.isdir(data_dir):
                 os.mkdir(data_dir)
 
@@ -125,7 +125,7 @@ def make_subfolders(main_dir, df):
                     shutil.copy(old_path, new_path)
                         
     else:
-        data_dir = os.path.join(main_dir,'data','ESC-US-depth')
+        data_dir = os.path.join(main_dir,'Data','ESC-US-depth')
         if not os.path.isdir(data_dir):
             os.mkdir(data_dir)
 
@@ -143,8 +143,8 @@ def reshape_US(num_files):
         else:
             return str(i)
         
-    path_us =  os.path.join(main_dir,'data', 'ESC-US')
-    folders = [os.path.join(main_dir, 'data', 'ESC-US',i) for i in os.listdir(path_us) if i!='.ipynb_checkpoints']
+    path_us =  os.path.join(main_dir,'Data', 'ESC-US')
+    folders = [os.path.join(main_dir, 'Data', 'ESC-US',i) for i in os.listdir(path_us) if i!='.ipynb_checkpoints']
     total_files = sum([len(os.listdir(i)) for i in folders])
     folders_final = total_files//num_files + 1*(len(folders)%num_files!=0)
     
@@ -152,17 +152,17 @@ def reshape_US(num_files):
     # create the new folders
     final_folders_list = []
     for i in range(folders_final):
-        folder = os.path.join(main_dir, 'data', 'ESC-US',num(i+1)+'_final_bis')
+        folder = os.path.join(main_dir, 'Data', 'ESC-US',num(i+1)+'_final_bis')
         if not os.path.exists(folder):
             os.mkdir(folder)
         final_folders_list.append(folder)
 
-    full_list_of_files = [[os.path.join(main_dir, 'data', 'ESC-US',folder,i) for i in os.listdir(folder) ] for folder in folders] #if i[-3:]=='ogg'fa sparire alcuni files
+    full_list_of_files = [[os.path.join(main_dir, 'Data', 'ESC-US',folder,i) for i in os.listdir(folder) ] for folder in folders] #if i[-3:]=='ogg'fa sparire alcuni files
     full_list_of_files = [i for j in full_list_of_files for i in j]
 
     for n,file in enumerate(full_list_of_files):
         i = n//num_files
-        shutil.move(file, os.path.join(main_dir, 'data', 'ESC-US',num(i+1)+'_final_bis',file.split('\\')[-1]))
+        shutil.move(file, os.path.join(main_dir, 'Data', 'ESC-US',num(i+1)+'_final_bis',file.split('\\')[-1]))
         if n%1000==0:
             print(f'Moved file {n}-th of {total_files}')
 
@@ -172,7 +172,7 @@ def reshape_US(num_files):
     
     #rename the new folders to cancel _final
     for i,folder in enumerate(final_folders_list):
-        os.rename(folder, os.path.join(main_dir, 'data', 'ESC-US',num(i+1)))
+        os.rename(folder, os.path.join(main_dir, 'Data', 'ESC-US',num(i+1)))
     return
 
 
