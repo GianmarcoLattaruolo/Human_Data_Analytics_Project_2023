@@ -19,3 +19,5 @@ __pycache__/*
 Visualization/__pycache__
 
 Saved_Datasets_Leo/
+Saved_Models/Dense_AE_ffnn/
+Dense_AE_ffnn/
