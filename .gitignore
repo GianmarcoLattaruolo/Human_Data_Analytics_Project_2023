@@ -1,4 +1,4 @@
-Saved_Models/AE_Conv_prep_flatten_MFCC/
+Saved_Models/AE_Conv_prep_flatten_MFCC/*
 *.zip
 *.ogg
 **/Data/ESC-US
