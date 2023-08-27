@@ -1154,7 +1154,8 @@ def US_training(AE_name,
                 epochs = 50,
                 preprocessing = None,
                 patience=10,
-                verbose = 0 
+                verbose = 0,
+                ndim = 3
                 ):
 
     #paramteres for the fit and callbacks
