@@ -173,7 +173,7 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
                 print("Proceding with normal dataset building.")
 
     if verbose > 0:
-        print("Creating dataset from folder 3: ", subfolder_path)
+        print("Creating dataset from folder: ", subfolder_path)
 
     #auxiliary functions
     @tf.autograph.experimental.do_not_convert
@@ -493,7 +493,7 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
     #saving the dataset as save
     def save_dataset(dataset, save_file):
         if save_file and type(dataset)!=np.ndarray:
-            print('dataset type',type(dataset))
+            #print('dataset type',type(dataset))
             save_dir = os.path.dirname(save_file)
             #check if the directory exists
             if not os.path.exists(save_dir):
@@ -1172,6 +1172,7 @@ def US_training(AE_name,
     if n_folders < last_folder:
         print('The number of folders is smaller than the last folder trained!')
         n_folders = last_folder
+    
 
     for i in range(last_folder+1,n_folders+1):
 
@@ -1187,11 +1188,6 @@ def US_training(AE_name,
                                                         verbose = verbose
                                                         )
         
-        #to be removed
-        for i,j in val.take(1):
-            print(f'The shape of val is {i.shape}')
-
-
         #fit the autoencoder
         history = autoencoder.fit(train, validation_data= val, epochs=epochs, callbacks = callbacks, verbose=0)
 
@@ -1220,5 +1216,8 @@ def US_training(AE_name,
         with open(os.path.join(main_dir,'Saved_Models',AE_name+'_count.txt'), 'w') as file:
             file.write(str(i))
 
+    # retrive the size of the model
+    print(f"This model has a size of {get_model_size(autoencoder)} MB")
+     
     return autoencoder
 
