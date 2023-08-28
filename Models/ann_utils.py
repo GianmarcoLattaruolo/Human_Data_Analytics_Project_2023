@@ -636,7 +636,7 @@ def create_dataset_lite(data_frame = None,
             return r
 
     def find_max_lazy(dataset, labels = labeled, verbose = verbose):
-            '''
+        
             max = 0
             lazy_number = 4
             if labels:
@@ -653,7 +653,7 @@ def create_dataset_lite(data_frame = None,
                         max = new
                 if verbose > 0:
                     print(f'The max value is {max}')  
-            '''        
+                    
             return 1, None 
             #return max.numpy(), audio.numpy()
 
@@ -676,7 +676,7 @@ def create_dataset_lite(data_frame = None,
     def laod_dataset(dataset_path):
         dataset = tf.data.Dataset.load(dataset_path)
         return dataset
-
+    
     def reshape(audio, ndim = ndim, preprocessing = preprocessing, verbose = verbose, tranpose = transpose):
         if preprocessing is not None:
             if ndim == 2:
@@ -717,6 +717,7 @@ def create_dataset_lite(data_frame = None,
     dataset  = dataset.map(lambda path, label: (tf.py_function(func=load_audio, inp=[path], Tout=tf.float32), label))
     
     # spectral preprocessing and resizing
+    flag = True
     if preprocessing is not None:
         if verbose > 0:
             print(f'Preprocessing: {preprocessing}')
@@ -727,6 +728,13 @@ def create_dataset_lite(data_frame = None,
             if resize:
                 if verbose > 0:
                     print(f'Resizing with shape: {new_height}x{new_width}')
+
+                #correct the number of dimensions to 3 in case of resizing (ndim must be 3)
+                dataset = dataset.map(lambda audio, label: (tf.py_function(func = reshape, inp = [audio], Tout = tf.float32), label), 
+                            num_parallel_calls=tf.data.AUTOTUNE, 
+                            deterministic = False)
+                flag = False
+                
                 dataset = dataset.map(lambda audio, label: (tf.py_function(func=resize_images, inp=[audio], Tout=tf.float32), label),
                             num_parallel_calls=tf.data.AUTOTUNE,
                             deterministic=False)
@@ -737,28 +745,33 @@ def create_dataset_lite(data_frame = None,
             if resize:
                 if verbose > 0:
                     print(f'Resizing with shape: {new_height}x{new_width}')
+
+                #correct the number of dimensions to 3 in case of resizing (ndim must be 3)
+                dataset = dataset.map(lambda audio: tf.py_function(func = reshape, inp = [audio], Tout = tf.float32),
+                            num_parallel_calls=tf.data.AUTOTUNE, 
+                            deterministic = False)
+                flag = False
                 dataset = dataset.map(lambda audio: tf.py_function(func=resize_images, inp=[audio], Tout=tf.float32),
                             num_parallel_calls=tf.data.AUTOTUNE,
                             deterministic=False)
         
     #normalization
     max, example_audio = find_max_lazy(dataset)
-
     if labeled:
         dataset = dataset.map(lambda audio, label: (audio/max, label), num_parallel_calls=tf.data.AUTOTUNE, deterministic = False)
     else:
         dataset = dataset.map(lambda audio: audio/max, num_parallel_calls=tf.data.AUTOTUNE, deterministic = False)    
 
     #adjust the shape of the elements in the dataset:
-    #if len(example_audio.shape)!=ndim:
-    if labeled:
-        dataset = dataset.map(lambda audio, label: (tf.py_function(func = reshape, inp = [audio], Tout = tf.float32), label), 
-                        num_parallel_calls=tf.data.AUTOTUNE, 
-                        deterministic = False)
-    else:
-        dataset = dataset.map(lambda audio: tf.py_function(func = reshape, inp = [audio], Tout = tf.float32),
+    if flag:
+        if labeled:
+            dataset = dataset.map(lambda audio, label: (tf.py_function(func = reshape, inp = [audio], Tout = tf.float32), label), 
                             num_parallel_calls=tf.data.AUTOTUNE, 
                             deterministic = False)
+        else:
+            dataset = dataset.map(lambda audio: tf.py_function(func = reshape, inp = [audio], Tout = tf.float32),
+                                num_parallel_calls=tf.data.AUTOTUNE, 
+                                deterministic = False)
 
     # save the dataset in a path
     if save_dataset_path is not None:
@@ -1208,9 +1221,7 @@ def US_training(AE_name,
             #evaluate the model on the test set
             scores = autoencoder.evaluate(test, return_dict=False)
             display(scores)
-        
-        # retrive the size of the model
-        print(f"This model has a size of {get_model_size(autoencoder)} MB")
+
 
         #update the number on the txt file overwritting the previous one
         with open(os.path.join(main_dir,'Saved_Models',AE_name+'_count.txt'), 'w') as file:
