@@ -11,6 +11,7 @@ import shutil
 import random
 import time
 import importlib
+import sklearn
 importlib.reload(importlib.import_module('Visualization.model_plot'))
 from Visualization.model_plot import *
 from tensorflow.keras.models import save_model # from labs
@@ -856,8 +857,9 @@ def K_fold_training(dataset, build_model,
 
     #build the keras-sklearn regressor
     #temp_params = {key_param:params[key_params][0] for key_param in params.keys()}
+
     model = KerasClassifier(model = build_model, epochs = epochs, verbose = verbose, callbacks = [callbacks_loss,callback_acc], **params)
-    
+
     def my_custom_loss_func(y_true, y_pred, verbose = verbose):
         y_pred = np.argmax(y_pred, axis=1)
         y_true = np.argmax(y_true, axis=1)
