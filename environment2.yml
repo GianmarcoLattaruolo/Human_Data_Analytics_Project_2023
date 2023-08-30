@@ -1,0 +1,17 @@
+name: DSEnv
+channels:
+  - defaults
+dependencies:
+  - h5py
+  - ipykernel
+  - keras
+  - matplotlib
+  - numpy
+  - pandas
+  - scikit-learn
+  - librosa
+  - seaborn
+  - protobuf
+  - pydub
+  - keras-tuner
+prefix: /home/leonardo/miniconda3/envs/DSEnv
