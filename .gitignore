@@ -1,14 +1,14 @@
-Saved_Models/AE_Conv_prep_flatten_MFCC/*
+Saved_Models/AE_Conv_prep_flatten_MFCC/
+/Data/ESC-US/
+**/info_files
 *.zip
 *.ogg
-**/Data/ESC-US
-**/info_files
 **Models/__pycache__/
 **Preprocessing/__pycache__/
 AE/cartoonset10k.tgz
 AE/cartoonset100k.tgz
 **AE/cartoonset100k
-Data/
+
 Cached_Datasets/*
 Saved_Datasets/
 

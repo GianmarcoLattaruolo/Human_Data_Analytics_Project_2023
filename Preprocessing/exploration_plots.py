@@ -3,8 +3,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import librosa
 from scipy.io import wavfile
-import seaborn as sb
-sb.set(style="white", palette="muted")
 import pandas as pd
 import IPython.display
 import random

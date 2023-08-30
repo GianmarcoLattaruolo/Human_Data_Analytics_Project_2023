@@ -80,7 +80,6 @@ def triangular(f1,f2,f3,value_in):
     elif value_in>f2:
         return (f3-value_in)/(f3-f2)
 
-
 def Mel_filterbank(f_min,f_max,N_filters,N,sr):
     equispaced = np.linspace(M(f_min),M(f_max),num=N_filters+2)
     frequencies = np.asarray(list(map(M_inverse,equispaced)))
