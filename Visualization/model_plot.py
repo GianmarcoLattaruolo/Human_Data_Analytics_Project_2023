@@ -2,7 +2,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-#import plotly.express as px
+import plotly.express as px
 import librosa
 import IPython.display as ipd
 import seaborn as sb
@@ -174,7 +174,7 @@ def visualize_the_weights(model, layer_name = None, layer_number = None, n_filte
         return None
     
 
-def plot_latent_space(encoder, dataset, show_labels = "all", numeric_labels = False, verbose = False):
+def plot_latent_space(encoder, dataset, show_labels = "all", numeric_labels = False, verbose = False, expected_shape = (1,220500, 1)):
     # encoder must be pre-trained 
     # dataset must be a dataset train, val or test returned by create_dataset
     # code_size must be 2 or 3, otherwise the plot will not be able to be displayed
@@ -182,6 +182,7 @@ def plot_latent_space(encoder, dataset, show_labels = "all", numeric_labels = Fa
     # show_labels can be incomplete (for example {0:1, 1:0, 2:1}), in this case the labels not present or with 0 value in the dict will not be plotted 
     # Classes in ESC10 are [0:'rain', 1:'sea_waves', 2:'clock_tick', 3:'chainsaw', 4:'crying_baby', 5:'rooster', 6:'crackling_fire', 7:'dog', 8:'helicopter', 9:'sneezing']
     # google_plot is a boolean, if True the plot will be displayed with plotly, if False the plot will be displayed with matplotlib
+    # expected_shape of raw audio is (1,220500, 1), for STFT is (1,64,128,1), for MFCC hopefully it is (1,64,128,1)
 
     #defining the mapping dictionaries
     lab = ['rain', 'sea_waves', 'clock_tick', 'chainsaw', 'crying_baby', 'rooster', 'crackling_fire', 'dog', 'helicopter', 'sneezing']
@@ -199,7 +200,7 @@ def plot_latent_space(encoder, dataset, show_labels = "all", numeric_labels = Fa
     dataset_encoded = dataset.map(lambda y,lab: (encoder(y),lab))
 
     #define the code_size
-    code_size = len(encoder(tf.zeros((1, 220500, 1)))[0])
+    code_size = len(encoder(tf.zeros(expected_shape))[0])
     
     if code_size>3 or code_size<2:
         print("code_size must be 2 or 3")
