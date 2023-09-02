@@ -371,3 +371,48 @@ def plot_clip_overview_latent_space(df, encoder, sample_rate=44100, segment=25, 
                 plt.colorbar()
                 
     plt.show()
+
+
+def plot_original_reconstructed_latent(model, n_figures, test):
+    # function to plot the images (STFT, MEL, or MFCC) and the reconstructed images
+    # model: the autoencoder model
+    # n_figures: how many images to plot
+    # test: the test dataset
+
+    encoder = model.layers[1]
+    random_input = np.random.rand(1, 64, 128, 1)
+    print(encoder(random_input).shape)
+
+    n = n_figures
+    plt.figure(figsize=(10, 15))
+    for index, (image, copy) in zip(range(1, n + 1), test.unbatch().shuffle(buffer_size=n + 1).take(n)):
+        ax = plt.subplot(n, 3, 3 * index - 2)  # Original image
+        plt.imshow(image.numpy(), cmap='viridis')
+        plt.title('Original')
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+        latent = image
+        latent = np.resize(latent, (64, 128))
+        latent = np.expand_dims(latent, axis=2)
+        latent = np.expand_dims(latent, axis=0)
+        latent = encoder.predict(latent, verbose=0)
+        latent = np.squeeze(latent, axis=0)
+        latent = latent.transpose(1, 2, 0)
+
+        ax = plt.subplot(n, 3, 3 * index - 1)  # Latent representation
+        plt.imshow(latent, cmap='viridis', aspect=0.4)
+        plt.title('Latent')
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+        reconstructed = model.predict(np.expand_dims(image, axis=0))
+        reconstructed = reconstructed.reshape(64, 128, 1)
+
+        ax = plt.subplot(n, 3, 3 * index)  # Reconstructed image
+        plt.imshow(reconstructed, cmap='viridis')
+        plt.title('Reconstructed')
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+    return plt.show()
