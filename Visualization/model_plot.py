@@ -323,7 +323,7 @@ def plot_clip_overview_latent_space(df, encoder, sample_rate=44100, segment=25, 
     categories = list(set(df.category))
     row = len(categories)
     
-    plt.subplots(row, column, figsize=(12, 1.5 * row))
+    plt.subplots(row, column, figsize=(9, 1.7 * row))
     plt.tight_layout(pad=0.7)
     
     for j, audio_type in enumerate(categories):
@@ -369,6 +369,8 @@ def plot_clip_overview_latent_space(df, encoder, sample_rate=44100, segment=25, 
                 plt.title(audio_type)
                 plt.imshow(mfccs[0])
                 plt.colorbar()
+
+    plt.subplots_adjust(hspace=0.5)
                 
     plt.show()
 
