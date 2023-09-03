@@ -1234,3 +1234,27 @@ def US_training(AE_name,
      
     return autoencoder
 
+
+def create_masked_dataset(dataset_path, batch_size = 30, normalize = True, verbose = 0):
+    #load the dataset 
+    dataset = tf.data.Dataset.load(dataset_path)
+
+    # normalize the dataset
+    max = 0
+    lazy_number = 4
+    for audio, label in dataset.take(lazy_number):
+        new = tf.reduce_max(tf.abs(audio)) 
+        if new > max:
+            max = new
+    max = max.numpy()
+    if verbose > 0:
+        print(f'The max value is {max}')
+
+    if normalize:
+        dataset = dataset.map(lambda x,y: (x/max,y))
+    
+    # create batches
+    dataset = dataset.batch(batch_size)
+    
+    return dataset
+

@@ -1,5 +1,6 @@
 Saved_Models/AE_Conv_prep_flatten_MFCC/
 /Data/ESC-US/
+/Saved_datasets/masked_dataset
 **/info_files
 *.zip
 *.ogg
