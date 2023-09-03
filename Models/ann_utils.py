@@ -1170,11 +1170,11 @@ def US_training(AE_name,
                 preprocessing = None,
                 patience=10,
                 verbose = 0,
-                ndim = 3
+                ndim = 3,
+                metrics = ['mse'],
                 ):
 
     #paramteres for the fit and callbacks
-    metrics = ['mse']
     callbacks = [tf.keras.callbacks.EarlyStopping(monitor='val_'+metrics[0],
                                                 mode='max',
                                                 verbose=verbose,
@@ -1211,7 +1211,7 @@ def US_training(AE_name,
         autoencoder.save(os.path.join(main_dir,'Saved_Models',AE_name), save_format  ='keras')
 
         #show the best epoch
-        val_acc_per_epoch = history.history['val_mse']
+        val_acc_per_epoch = history.history['val_'+metrics[0]]
         best_epoch = val_acc_per_epoch.index(max(val_acc_per_epoch)) + 1
         if verbose > 0:
             print('Best epoch: %d' % (best_epoch,))
