@@ -550,8 +550,8 @@ def create_dataset(subfolder_path, # folder of the audio data we want to import
             return train, val, test, INPUT_DIM
         else:
             return train, val, test
-
-#QUI RESIZE ENTRA IN CONFLITTO CON FIND MAX LAZY, C'E' ANCHE DA AGGIUSTARE IL RETURN NEL CASO DI LOAD DATASET
+        
+#care for some conflicts between finda max lazy and resize when loading the dataset
 @tf.autograph.experimental.do_not_convert
 def create_dataset_lite(data_frame = None,
                         labeled = True,
@@ -1257,4 +1257,3 @@ def create_masked_dataset(dataset_path, batch_size = 30, normalize = True, verbo
     dataset = dataset.batch(batch_size)
     
     return dataset
-
