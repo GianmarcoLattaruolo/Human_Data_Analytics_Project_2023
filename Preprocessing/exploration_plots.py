@@ -11,7 +11,7 @@ from scipy import signal
 from scipy.fft import fft,ifft,fftfreq, fftshift
 from scipy.signal import stft,spectrogram,periodogram
 
-def one_random_audio(main_dir):
+def one_random_audio(main_dir, end = 1000): #end max is 220500
     dir_path = os.path.join(main_dir, 'data', 'ESC-50')
     audio_files = [os.path.join(dir_path, i) for i in os.listdir(dir_path)]
     i = random.randint(0,len(audio_files))
@@ -33,7 +33,7 @@ def one_random_audio(main_dir):
     print(f'Audio category: {list(meta_data.category[meta_data.filename==os.path.basename(os.path.normpath(clip))])[0]}')
     display( IPython.display.Audio(data = y, rate=samplerate)  )
     plt.subplot(1,1,1)
-    plt.plot(y[:1000])
+    plt.plot(y[:end])
 
     return y, sr
 
