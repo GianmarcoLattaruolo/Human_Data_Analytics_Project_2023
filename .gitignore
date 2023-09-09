@@ -1,5 +1,7 @@
 Saved_Models/AE_Conv_prep_flatten_MFCC/
 /Data/ESC-US/
+/Data/AudioSet/
+/Data/AudioSet_original
 /Saved_datasets/masked_dataset
 **/info_files
 *.zip
