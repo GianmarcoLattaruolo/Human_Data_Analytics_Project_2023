@@ -8,6 +8,9 @@ We describe the github folder here. We have not marked all the subfolders and al
 ├── AE_Conv_prep_flatten_STFT
 │	It contains grid search results
 │
+├── AE_Conv_prep_flatten_STFT_Augmented
+│	It contains grid search results
+│
 ├── AudioSet.ipynb
 │	This notebook was for managing the AudioSet database
 │
@@ -50,6 +53,9 @@ We describe the github folder here. We have not marked all the subfolders and al
 ├── Logs_Masked
 │	This folder contains the logs of the training on the augmented dataset
 │
+├── Main_Notebook.ipynb
+│	The main notebook containing all the work done
+│
 ├── Models
 │	├── ann_utils.py
 │	│	Script for neural network and dataset management
@@ -70,6 +76,9 @@ We describe the github folder here. We have not marked all the subfolders and al
 │	Section of the main notebook
 │
 ├── notebook_3.2_AE_Conv_prep_flatten_MFCC.ipynb
+│	Section of the main notebook
+│
+├── notebook_3.2_AE_Conv_prep_flatten_STFT_Augmented.ipynb
 │	Section of the main notebook
 │
 ├── notebook_3.2_AE_Conv_prep_flatten_STFT.ipynb
