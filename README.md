@@ -4,8 +4,7 @@
 Here we describe the github repo. We have not marked all the subfolders and all the files present. Some folders may be missing as they are too heavy to be uploaded to github. Following the name of files or folders is often a brief description of them. 
 
 
-.
-
+.<br>
 ├── AE_Conv_prep_flatten_MFCC 
 │	It contains grid search results 
 │
