@@ -315,66 +315,6 @@ def plot_original_reconstructed_raw(model, test, n_figures = 5):
 
     return plt.show()
 
-def plot_clip_overview_latent_space(df, encoder, sample_rate=44100, segment=25, overlapping=10, column=5, preprocessing='STFT'):
-
-    segment_samples = round(sample_rate * segment / 1000)  # Calculate the number of samples per segment
-    overlap_samples = round(sample_rate * overlapping / 1000)
-
-    categories = list(set(df.category))
-    row = len(categories)
-    
-    plt.subplots(row, column, figsize=(9, 1.7 * row))
-    plt.tight_layout(pad=0.7)
-    
-    for j, audio_type in enumerate(categories):
-        paths = list(df.full_path[df.category == audio_type])
-        paths = random.sample(paths, column)
-
-        for i, audio_sample in enumerate(paths):
-            data, samplerate = librosa.load(audio_sample, sr=44100)
-            
-            if preprocessing == 'STFT':
-                # STFT transformation
-                D = librosa.stft(data, win_length=segment_samples, hop_length=overlap_samples)
-                S_db = librosa.amplitude_to_db(np.abs(D), ref=np.max)
-                
-                #resize the image so that the encoder can process it
-                # shape wanted by the encoder: (batch_size, 64, 128, 1)
-                S_db = np.resize(S_db, (64,128))
-                S_db = np.expand_dims(S_db, axis=2)
-                S_db = np.expand_dims(S_db, axis=0)
-                S_db = encoder.predict(S_db, verbose=0)
-                S_db = np.squeeze(S_db, axis=0)
-                
-                plt.subplot(row,column,j*column+i+1)
-                plt.title(audio_type)
-                plt.imshow(S_db[0])
-                #plt.colorbar(format='%+2.0f dB')
-                
-            elif preprocessing == 'MFCC':
-                # MFCC transformation
-                mfccs = librosa.feature.mfcc(y=data, sr=samplerate, n_mfcc=40)
-                max = np.max(np.abs(mfccs))
-                mfccs = mfccs/max
-
-                #resize the image so that the encoder can process it
-                # shape wanted by the encoder: (batch_size, 64, 128, 1)
-                mfccs = np.resize(mfccs, (64,128))
-                mfccs = np.expand_dims(mfccs, axis=2)
-                mfccs = np.expand_dims(mfccs, axis=0)
-                mfccs = encoder.predict(mfccs, verbose=0)
-                mfccs = np.squeeze(mfccs, axis=0)
-                
-                plt.subplot(row,column,j*column+i+1)
-                plt.title(audio_type)
-                plt.imshow(mfccs[0])
-                plt.colorbar()
-
-    plt.subplots_adjust(hspace=0.5)
-                
-    plt.show()
-
-
 def plot_original_reconstructed_latent(model, n_figures, test):
     # function to plot the images (STFT, MEL, or MFCC) and the reconstructed images
     # model: the autoencoder model
@@ -402,6 +342,9 @@ def plot_original_reconstructed_latent(model, n_figures, test):
         latent = np.squeeze(latent, axis=0)
         latent = latent.transpose(1, 2, 0)
 
+        #min-max normalization
+        latent = (latent - np.min(latent)) / (np.max(latent) - np.min(latent))
+
         ax = plt.subplot(n, 3, 3 * index - 1)  # Latent representation
         plt.imshow(latent, cmap='viridis', aspect=0.4)
         plt.title('Latent')
@@ -418,3 +361,50 @@ def plot_original_reconstructed_latent(model, n_figures, test):
         ax.get_yaxis().set_visible(False)
 
     return plt.show()
+
+
+def plot_clip_overview_latent_space(encoder, test, label_names, n_figures = 5, column=5):
+    # test must be a dataset with labels
+
+    categories = label_names
+    row = len(categories)
+    
+    plt.subplots(row, column, figsize=(8, 1.7 * row))
+    plt.tight_layout(pad=0.7)
+    
+    for j, audio_type in enumerate(categories):
+        test_unbatched = test.unbatch().shuffle(buffer_size=1000)
+        
+        def filter_func(x, y):
+            return tf.math.argmax(y) == j
+
+        test_filtered = test_unbatched.filter(filter_func)
+       
+        i = 0
+        k = 0
+        for stft, label in test_filtered.take(400):
+            if i == column:
+                break
+            else: 
+                if tf.math.argmax(label) == j:
+                    #plot latent img
+                    stft = np.resize(stft, (64, 128))
+                    stft = np.expand_dims(stft, axis=2)
+                    stft = np.expand_dims(stft, axis=0)
+                    latent = encoder.predict(stft, verbose=0)
+                    latent = np.squeeze(latent, axis=0)
+                    latent = latent.transpose(1, 2, 0)
+
+                    #min-max normalization
+                    latent = (latent - np.min(latent)) / (np.max(latent) - np.min(latent))
+
+                    ax = plt.subplot(row,column,j*column+i+1)
+                    plt.imshow(latent, cmap='viridis')#, aspect=0.4)
+                    plt.title(audio_type)
+                    ax.get_xaxis().set_visible(False)
+                    ax.get_yaxis().set_visible(False)
+                    i += 1
+
+        #plt.colorbar()
+
+    plt.subplots_adjust(hspace=0.5)
