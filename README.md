@@ -5,7 +5,7 @@ Here we describe the github repo. We have not marked all the subfolders and all 
 
 
 .<br>
-├── AE_Conv_prep_flatten_MFCC 
+├── AE_Conv_prep_flatten_MFCC<br>
 │	It contains grid search results 
 │
 ├── AE_Conv_prep_flatten_STFT
