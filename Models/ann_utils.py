@@ -1235,7 +1235,39 @@ def US_training(AE_name,
     return autoencoder
 
 
-def create_masked_dataset(dataset_path, batch_size = 30, normalize = True, verbose = 0):
+def create_masked_dataset(dataset_path, batch_size = 30, normalize = True, verbose = 0, resize = True):
+    #load the dataset 
+    dataset = tf.data.Dataset.load(dataset_path)
+
+    # normalize the dataset
+    max = 0
+    lazy_number = 4
+    for audio, label in dataset.take(lazy_number):
+        new = tf.reduce_max(tf.abs(audio)) 
+        if new > max:
+            max = new
+    max = max.numpy()
+    if verbose > 0:
+        print(f'The max value is {max}')
+
+    if normalize:
+        dataset = dataset.map(lambda x,y: (x/max,y))
+
+    def resize_images(image, new_height = 64, new_width = 128):
+        # INPUT: the audio preprocessed by STFT, MEL or MFCC
+        # OUTPUT: the audio reshaped as a tensor (needed for the convolutional layers)
+        image = tf.image.resize(image, [new_height, new_width])
+        return image
+    
+    if resize: 
+        dataset = dataset.map(lambda x,y: (tf.py_function(func=resize_images, inp=[x], Tout=tf.float32),y))
+    
+    # create batches
+    dataset = dataset.batch(batch_size)
+    
+    return dataset
+
+def create_masked_dataset_AE(dataset_path, batch_size = 30, normalize = True, verbose = 0, val_split = 0.25, resize = True):
     #load the dataset 
     dataset = tf.data.Dataset.load(dataset_path)
 
@@ -1253,7 +1285,99 @@ def create_masked_dataset(dataset_path, batch_size = 30, normalize = True, verbo
     if normalize:
         dataset = dataset.map(lambda x,y: (x/max,y))
     
+    def resize_images(image, new_height = 64, new_width = 128):
+        # INPUT: the audio preprocessed by STFT, MEL or MFCC
+        # OUTPUT: the audio reshaped as a tensor (needed for the convolutional layers)
+        image = tf.image.resize(image, [new_height, new_width])
+        return image
+    
+    if resize: 
+        dataset = dataset.map(lambda x,y: (tf.py_function(func=resize_images, inp=[x], Tout=tf.float32),y))
+
+    # map the first element of the train dataset over the second and overwrite it
+    # we do it in order to have the same input and output for the autoencoder
+    dataset = dataset.map(lambda x, y: (x, x))
+    
     # create batches
     dataset = dataset.batch(batch_size)
+
+    # split the dataset in train and validation
+    train = dataset.skip(int(dataset.cardinality().numpy() * val_split))
+    val_test = dataset.take(int(dataset.cardinality().numpy() * val_split))
+    val = val_test.take(int(val_test.cardinality().numpy() / 2))
+    test = val_test.skip(int(val_test.cardinality().numpy() / 2))
     
-    return dataset
+    return train, val, test
+
+
+def Masked_AE_training(AE_name,
+                autoencoder,
+                n_folders,
+                epochs = 50,
+                patience=10,
+                verbose = 0,
+                ndim = 3,
+                metrics = ['mse'],
+                ):
+
+    #paramteres for the fit and callbacks
+    callbacks = [tf.keras.callbacks.EarlyStopping(monitor='val_'+metrics[0],
+                                                mode='max',
+                                                verbose=verbose,
+                                                restore_best_weights=True,
+                                                patience=patience)]
+
+    #read the file txt to know the folder to start 
+    with open(os.path.join(main_dir,'Saved_Models',AE_name+'_count.txt'), 'r') as file:
+        last_folder = int(file.read())
+        print(f'Last folder trained: {last_folder}')
+
+    if n_folders < last_folder:
+        print('The number of folders is smaller than the last folder trained!')
+        n_folders = last_folder
+    
+
+    for i in range(last_folder+1,n_folders+1):
+
+        #load the model if i > 1
+        if i>1:
+            autoencoder = tf.keras.models.load_model(os.path.join(main_dir,'Saved_Models',AE_name))
+
+        #create the dataset
+
+        dataset_path = os.path.join(main_dir,'Saved_Datasets','masked_dataset',num(i))
+        
+        train, val, test = create_masked_dataset_AE(dataset_path,
+                                                    normalize = True,
+                                                    verbose = verbose, 
+                                                    val_split = 0.25)
+        
+        #fit the autoencoder
+        history = autoencoder.fit(train, validation_data= val, epochs=epochs, callbacks = callbacks, verbose=0)
+
+        #save the model
+        autoencoder.save(os.path.join(main_dir,'Saved_Models',AE_name), save_format  ='keras')
+
+        #show the best epoch
+        val_acc_per_epoch = history.history['val_'+metrics[0]]
+        best_epoch = val_acc_per_epoch.index(max(val_acc_per_epoch)) + 1
+        if verbose > 0:
+            print('Best epoch: %d' % (best_epoch,))
+        
+        if verbose > 1:
+            #plot the history of the training
+            plot_history(history)
+
+            #evaluate the model on the test set
+            scores = autoencoder.evaluate(test, return_dict=False)
+            display(scores)
+
+
+        #update the number on the txt file overwritting the previous one
+        with open(os.path.join(main_dir,'Saved_Models',AE_name+'_count.txt'), 'w') as file:
+            file.write(str(i))
+
+    # retrive the size of the model
+    print(f"This model has a size of {get_model_size(autoencoder)} MB")
+     
+    return autoencoder
