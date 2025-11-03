@@ -23,7 +23,7 @@ from sklearn.metrics import (PrecisionRecallDisplay, RocCurveDisplay,
                              precision_recall_fscore_support, precision_score,
                              recall_score, roc_curve)
 from sklearn.model_selection import GridSearchCV
-from tensorflow.keras.models import save_model  # from labs
+from keras.models import save_model  # from labs
 
 from Visualization.model_plot import *
 
