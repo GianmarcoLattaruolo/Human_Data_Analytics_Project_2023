@@ -38,7 +38,11 @@ def confusion_matrix(y_true, y_pred, labels, show_figure=True):
     if show_figure:
         plt.figure(figsize=(h, w))
         sb.heatmap(
-            confusion_mtx, xticklabels=labels, yticklabels=labels, annot=annot, fmt="g"
+            confusion_mtx,
+            xticklabels=labels,
+            yticklabels=labels,
+            annot=annot,
+            fmt="g",
         )
         plt.xlabel("Prediction")
         plt.ylabel("True Label")
@@ -61,11 +65,18 @@ def get_misclassified_audio_paths(true_labels, predicted_labels, data_frame, lab
 
 
 def listen_to_wrong_audio(
-    data_frame, true_labels, predicted_labels, labels, confusion_mtx=None
+    data_frame,
+    true_labels,
+    predicted_labels,
+    labels,
+    confusion_mtx=None,
 ):
     if confusion_mtx is None:
         confusion_mtx = confusion_matrix(
-            true_labels, predicted_labels, labels, show_figure=False
+            true_labels,
+            predicted_labels,
+            labels,
+            show_figure=False,
         )
 
     samplerate = 44100
@@ -149,9 +160,12 @@ def plot_history(history):
 
 
 def visualize_the_weights(
-    model, layer_name=None, layer_number=None, n_filters=16, verbose=1
+    model,
+    layer_name=None,
+    layer_number=None,
+    n_filters=16,
+    verbose=1,
 ):
-
     # extract the weights of the layer
     if layer_name is None:
         number_of_layers = len(model.get_weights())
@@ -159,7 +173,7 @@ def visualize_the_weights(
             layer_number = 0
         if layer_number > number_of_layers - 1:
             print(
-                f"The model has only {number_of_layers} layers. Please select a layer number between 0 and {number_of_layers-1}"
+                f"The model has only {number_of_layers} layers. Please select a layer number between 0 and {number_of_layers - 1}",
             )
             return
 
@@ -223,7 +237,7 @@ def plot_latent_space(
     ]
     mapping_dict = dict(zip(lab, range(10)))
     inverse_mapping_dict = dict(
-        zip(range(10), [string.replace("_", " ") for string in lab])
+        zip(range(10), [string.replace("_", " ") for string in lab]),
     )
 
     if show_labels == "all":
@@ -231,7 +245,7 @@ def plot_latent_space(
     if type(show_labels) == dict:
         # check if the keys of the dict are 'rain', 'sea_waves', 'clock_tick', 'chainsaw', 'crying_baby', 'rooster', 'crackling_fire', 'dog', 'helicopter', 'sneezing', in this case we need to convert the keys to numbers
         if set(show_labels.keys()).issubset(
-            set(lab)
+            set(lab),
         ):  # we use subset because we can have a dict with only some of the labels
             show_labels = {mapping_dict[k]: v for k, v in show_labels.items()}
         show_labels = {
@@ -306,7 +320,6 @@ plot_latent_space(encoder, train, show_labels = {'rain':1, 'sea_waves':0, 'chain
 
 
 def plot_original_reconstructed(model, n_figures, test):
-
     # function to plot the images (STFT, MEL or MFCC) and the reconstructed images
     # model : the autoencoder model
     # n_figures: how many images to plot
@@ -314,9 +327,9 @@ def plot_original_reconstructed(model, n_figures, test):
     n = n_figures
     plt.figure(figsize=(10, 15))
     for index, (image, copy) in zip(
-        range(1, n + 1), test.unbatch().shuffle(buffer_size=n + 1).take(n)
+        range(1, n + 1),
+        test.unbatch().shuffle(buffer_size=n + 1).take(n),
     ):
-
         ax = plt.subplot(n, 2, 2 * index - 1)
         plt.imshow(image.numpy(), cmap="viridis")
         plt.title("Original")
@@ -335,11 +348,11 @@ def plot_original_reconstructed(model, n_figures, test):
 
 
 def plot_original_reconstructed_raw(model, test, n_figures=5):
-
     n = n_figures
     plt.figure(figsize=(10, 3 * n))
     for index, (audio, copy) in zip(
-        range(1, n + 1), test.unbatch().shuffle(buffer_size=n + 1).take(n)
+        range(1, n + 1),
+        test.unbatch().shuffle(buffer_size=n + 1).take(n),
     ):
         samplerate = 44100
         display(ipd.Audio(data=audio.numpy().reshape(220500), rate=samplerate))
@@ -375,7 +388,8 @@ def plot_original_reconstructed_latent(model, n_figures, test):
     n = n_figures
     plt.figure(figsize=(10, 15))
     for index, (image, copy) in zip(
-        range(1, n + 1), test.unbatch().shuffle(buffer_size=n + 1).take(n)
+        range(1, n + 1),
+        test.unbatch().shuffle(buffer_size=n + 1).take(n),
     ):
         ax = plt.subplot(n, 3, 3 * index - 2)  # Original image
         plt.imshow(image.numpy(), cmap="viridis")

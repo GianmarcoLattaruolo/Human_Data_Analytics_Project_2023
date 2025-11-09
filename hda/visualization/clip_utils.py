@@ -13,10 +13,10 @@ def segmentation(data, sample_rate=44100, segment=25, overlapping=10):
 
     N_tot = len(data)
     N = round(
-        sample_rate * segment / 1000
+        sample_rate * segment / 1000,
     )  # Calculate the number of samples per segment
     overlap = round(
-        sample_rate * overlapping / 1000
+        sample_rate * overlapping / 1000,
     )  # Calculate the number of overlapping samples
 
     total_segments = (N_tot - N) / (N - overlap) + 1
@@ -28,7 +28,7 @@ def segmentation(data, sample_rate=44100, segment=25, overlapping=10):
         total_segments = int(total_segments)
 
     frames = np.zeros(
-        (total_segments, N)
+        (total_segments, N),
     )  # Initialize an array to store the segmented data
     start = 0  # Starting index for each segment
 
@@ -63,7 +63,7 @@ def DCT(vec):
     C = np.zeros((1, N))
     for u in range(N):
         C[0, u] = alpha(u, N) * np.sum(
-            [vec[n] * np.cos(np.pi * (2 * n + 1) * u / (2 * N)) for n in range(N)]
+            [vec[n] * np.cos(np.pi * (2 * n + 1) * u / (2 * N)) for n in range(N)],
         )
 
     return C
@@ -88,7 +88,6 @@ def Delta(vec, M):
 
 
 def triangular(f1, f2, f3, value_in):
-
     if value_in < f1 or value_in > f3:
         return 0
     elif value_in <= f2:
@@ -105,7 +104,7 @@ def Mel_filterbank(f_min, f_max, N_filters, N, sr):
     for m in range(N_filters):
         f1, f2, f3 = frequencies[m : m + 3]
         filters[m] = np.asarray(
-            [triangular(f1, f2, f3, sr / N * i) for i in range(1, N_half + 1)]
+            [triangular(f1, f2, f3, sr / N * i) for i in range(1, N_half + 1)],
         )
 
     return filters
@@ -129,7 +128,10 @@ def MFCC(
     N_total = len(data)
     # step 1: frame the audio
     frames, N, n_frames = segmentation(
-        data, sample_rate=sr, segment=segment, overlapping=overlapping
+        data,
+        sample_rate=sr,
+        segment=segment,
+        overlapping=overlapping,
     )
 
     # define the filterbank once for all
@@ -164,12 +166,14 @@ def MFCC(
         if delta_feature:
             delta = Delta(full_feature_vector, M)
             full_feature_vector = np.concatenate(
-                (full_feature_vector, delta.reshape(-1)), axis=0
+                (full_feature_vector, delta.reshape(-1)),
+                axis=0,
             )
         if delta_delta_feature:
             delta_delta = Delta(delta, M)
             full_feature_vector = np.concatenate(
-                (full_feature_vector, delta_delta.reshape(-1)), axis=0
+                (full_feature_vector, delta_delta.reshape(-1)),
+                axis=0,
             )
         if energy_feature:
             E_tot = np.log10(np.sum(frame**2)).reshape((1,))

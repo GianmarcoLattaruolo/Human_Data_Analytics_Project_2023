@@ -16,6 +16,7 @@ import tensorflow as tf
 
 importlib.reload(importlib.import_module("Visualization.model_plot"))
 import keras_tuner as kt
+from keras.models import save_model  # from labs
 from scikeras.wrappers import KerasClassifier
 from sklearn.metrics import (
     PrecisionRecallDisplay,
@@ -30,14 +31,11 @@ from sklearn.metrics import (
     roc_curve,
 )
 from sklearn.model_selection import GridSearchCV
-from keras.models import save_model  # from labs
-
 from Visualization.model_plot import *
 
 
 # class from course laboratories
 class ModelSaveCallback(tf.keras.callbacks.Callback):
-
     def __init__(self, file_name):
         super(ModelSaveCallback, self).__init__()
         self.file_name = file_name
@@ -155,7 +153,6 @@ def create_dataset(
             and save_val is not None
             and save_labels is not None
         ):
-
             if (
                 os.path.exists(save_train)
                 and os.path.exists(save_test)
@@ -172,7 +169,11 @@ def create_dataset(
 
                 if show_example_batch:
                     INPUT_DIM, n_labels = example_batch(
-                        train, val, test, label_names, verbose=verbose
+                        train,
+                        val,
+                        test,
+                        label_names,
+                        verbose=verbose,
                     )
                     return train, val, test, label_names, INPUT_DIM, n_labels
                 else:
@@ -261,7 +262,10 @@ def create_dataset(
         # using librosa to perform the preprocessing
         if preprocessing == "STFT":
             stft_librosa = librosa.stft(
-                audio, hop_length=hop_length, win_length=nperseg, n_fft=n_fft
+                audio,
+                hop_length=hop_length,
+                win_length=nperseg,
+                n_fft=n_fft,
             )
             r = librosa.amplitude_to_db(np.abs(stft_librosa), ref=np.max)
 
@@ -380,7 +384,6 @@ def create_dataset(
     # creation of the tf dataset from an audio folder
     # Supervised learning case
     if labels is not None:
-
         train, val_test = tf.keras.utils.audio_dataset_from_directory(
             directory=subfolder_path.replace("\\", "/"),
             labels=labels,
@@ -410,7 +413,7 @@ def create_dataset(
             print("You are using an unlabelled dataset")
         dataset = tf.data.Dataset.list_files(subfolder_path + "/*.ogg", shuffle=False)
         dataset = dataset.map(
-            lambda path: tf.py_function(func=decode_ogg, inp=[path], Tout=tf.float32)
+            lambda path: tf.py_function(func=decode_ogg, inp=[path], Tout=tf.float32),
         )
         # dataset = dataset.interleave(lambda path:  tf.py_function(func=decode_ogg, inp=[path], Tout=tf.float32), block_length=16, num_parallel_calls=tf.data.AUTOTUNE )
 
@@ -444,7 +447,7 @@ def create_dataset(
                 lambda audio, target: (
                     tf.py_function(spectral_preprocessing_audio, [audio], [tf.float32]),
                     target,
-                )
+                ),
             )
             train = train.map(
                 lambda matrix, target: (reshape_tensor(matrix), target),
@@ -454,7 +457,7 @@ def create_dataset(
                 lambda audio, target: (
                     tf.py_function(spectral_preprocessing_audio, [audio], [tf.float32]),
                     target,
-                )
+                ),
             )
             val = val.map(
                 lambda matrix, target: (reshape_tensor(matrix), target),
@@ -464,7 +467,7 @@ def create_dataset(
                 lambda audio, target: (
                     tf.py_function(spectral_preprocessing_audio, [audio], [tf.float32]),
                     target,
-                )
+                ),
             )
             test = test.map(
                 lambda matrix, target: (reshape_tensor(matrix), target),
@@ -473,21 +476,27 @@ def create_dataset(
         else:
             train = train.map(
                 lambda audio: tf.py_function(
-                    spectral_preprocessing_audio, [audio], [tf.float32]
+                    spectral_preprocessing_audio,
+                    [audio],
+                    [tf.float32],
                 ),
                 tf.data.AUTOTUNE,
             )
             train = train.map(lambda matrix: reshape_tensor(matrix), tf.data.AUTOTUNE)
             val = val.map(
                 lambda audio: tf.py_function(
-                    spectral_preprocessing_audio, [audio], [tf.float32]
+                    spectral_preprocessing_audio,
+                    [audio],
+                    [tf.float32],
                 ),
                 tf.data.AUTOTUNE,
             )
             val = val.map(lambda matrix: reshape_tensor(matrix), tf.data.AUTOTUNE)
             test = test.map(
                 lambda audio: tf.py_function(
-                    spectral_preprocessing_audio, [audio], [tf.float32]
+                    spectral_preprocessing_audio,
+                    [audio],
+                    [tf.float32],
                 ),
                 tf.data.AUTOTUNE,
             )
@@ -499,40 +508,46 @@ def create_dataset(
                     lambda image, target: (
                         tf.py_function(reshape_images_map, [image], [tf.float32]),
                         target,
-                    )
+                    ),
                 )
                 # train = train.map(lambda matrix, target:(reshape_tensor(matrix), target), tf.data.AUTOTUNE)
                 val = val.map(
                     lambda image, target: (
                         tf.py_function(reshape_images_map, [image], [tf.float32]),
                         target,
-                    )
+                    ),
                 )
                 # val = val.map(lambda matrix, target:(reshape_tensor(matrix), target), tf.data.AUTOTUNE)
                 test = test.map(
                     lambda image, target: (
                         tf.py_function(reshape_images_map, [image], [tf.float32]),
                         target,
-                    )
+                    ),
                 )
                 # test = test.map(lambda matrix, target:(reshape_tensor(matrix), target), tf.data.AUTOTUNE)
             else:
                 train = train.map(
                     lambda image: tf.py_function(
-                        reshape_images_map, [image], [tf.float32]
-                    )
+                        reshape_images_map,
+                        [image],
+                        [tf.float32],
+                    ),
                 )
                 # train = train.map(lambda matrix: reshape_tensor(matrix), tf.data.AUTOTUNE)
                 val = val.map(
                     lambda image: tf.py_function(
-                        reshape_images_map, [image], [tf.float32]
-                    )
+                        reshape_images_map,
+                        [image],
+                        [tf.float32],
+                    ),
                 )
                 # val = val.map(lambda matrix: reshape_tensor(matrix), tf.data.AUTOTUNE)
                 test = test.map(
                     lambda image: tf.py_function(
-                        reshape_images_map, [image], [tf.float32]
-                    )
+                        reshape_images_map,
+                        [image],
+                        [tf.float32],
+                    ),
                 )
                 # test = test.map(lambda matrix: reshape_tensor(matrix), tf.data.AUTOTUNE)
 
@@ -545,13 +560,16 @@ def create_dataset(
 
         if labels:
             train = train.map(
-                lambda matrix, target: (matrix / max, target), tf.data.AUTOTUNE
+                lambda matrix, target: (matrix / max, target),
+                tf.data.AUTOTUNE,
             )
             val = val.map(
-                lambda matrix, target: (matrix / max, target), tf.data.AUTOTUNE
+                lambda matrix, target: (matrix / max, target),
+                tf.data.AUTOTUNE,
             )
             test = test.map(
-                lambda matrix, target: (matrix / max, target), tf.data.AUTOTUNE
+                lambda matrix, target: (matrix / max, target),
+                tf.data.AUTOTUNE,
             )
         else:
             train = train.map(lambda matrix: matrix / max, tf.data.AUTOTUNE)
@@ -593,7 +611,8 @@ def create_dataset(
     # Shuffling the dataset
     if shuffle:
         train = train.shuffle(
-            train.cardinality().numpy(), reshuffle_each_iteration=True
+            train.cardinality().numpy(),
+            reshuffle_each_iteration=True,
         )
         # We should not shuffle the validation and test set
         # val = val.shuffle(val_size, reshuffle_each_iteration=True)
@@ -634,7 +653,6 @@ def create_dataset(
                 print(f"Dataset saved in {save_file}")
 
         elif save_file and type(dataset) == np.ndarray:
-
             # check if the file .txt already exists
             if os.path.exists(save_file):
                 os.remove(save_file)
@@ -666,7 +684,11 @@ def create_dataset(
             if verbose > 0:
                 print("Showing example batch")
             INPUT_DIM, num_classes = example_batch(
-                train, val, test, label_names, verbose=verbose
+                train,
+                val,
+                test,
+                label_names,
+                verbose=verbose,
             )
             return train, val, test, label_names, INPUT_DIM, num_classes
         else:
@@ -704,7 +726,6 @@ def create_dataset_lite(
     new_height=64,
     new_width=128,
 ):
-
     # set all seed
     seed = 42
     tf.random.set_seed(seed)
@@ -729,7 +750,6 @@ def create_dataset_lite(
         cepstral_num=cepstral_num,
         N_filters=N_filters,
     ):
-
         audio = audio.numpy()
 
         # transform the segment and overlapping from ms to samples
@@ -741,7 +761,10 @@ def create_dataset_lite(
         # using librosa to perform the preprocessing
         if preprocessing == "STFT":
             stft_librosa = librosa.stft(
-                audio, hop_length=hop_length, win_length=nperseg, n_fft=n_fft
+                audio,
+                hop_length=hop_length,
+                win_length=nperseg,
+                n_fft=n_fft,
             )
             r = librosa.amplitude_to_db(np.abs(stft_librosa), ref=np.max)
 
@@ -782,7 +805,6 @@ def create_dataset_lite(
         return r
 
     def find_max_lazy(dataset, labels=labeled, verbose=verbose):
-
         max = 0
         lazy_number = 4
         if labels:
@@ -875,7 +897,7 @@ def create_dataset_lite(
         lambda path, label: (
             tf.py_function(func=load_audio, inp=[path], Tout=tf.float32),
             label,
-        )
+        ),
     )
 
     # spectral preprocessing and resizing
@@ -914,7 +936,9 @@ def create_dataset_lite(
                 dataset = dataset.map(
                     lambda audio, label: (
                         tf.py_function(
-                            func=resize_images, inp=[audio], Tout=tf.float32
+                            func=resize_images,
+                            inp=[audio],
+                            Tout=tf.float32,
                         ),
                         label,
                     ),
@@ -938,7 +962,9 @@ def create_dataset_lite(
                 # correct the number of dimensions to 3 in case of resizing (ndim must be 3)
                 dataset = dataset.map(
                     lambda audio: tf.py_function(
-                        func=reshape, inp=[audio], Tout=tf.float32
+                        func=reshape,
+                        inp=[audio],
+                        Tout=tf.float32,
                     ),
                     num_parallel_calls=tf.data.AUTOTUNE,
                     deterministic=False,
@@ -946,7 +972,9 @@ def create_dataset_lite(
                 flag = False
                 dataset = dataset.map(
                     lambda audio: tf.py_function(
-                        func=resize_images, inp=[audio], Tout=tf.float32
+                        func=resize_images,
+                        inp=[audio],
+                        Tout=tf.float32,
                     ),
                     num_parallel_calls=tf.data.AUTOTUNE,
                     deterministic=False,
@@ -981,7 +1009,9 @@ def create_dataset_lite(
         else:
             dataset = dataset.map(
                 lambda audio: tf.py_function(
-                    func=reshape, inp=[audio], Tout=tf.float32
+                    func=reshape,
+                    inp=[audio],
+                    Tout=tf.float32,
                 ),
                 num_parallel_calls=tf.data.AUTOTUNE,
                 deterministic=False,
@@ -1020,7 +1050,7 @@ def example_batch(
             print(f"Audio shape: {example_train_batch.shape}")
             if label_names is not None:
                 print(f"Label shape: {label.shape}")
-                print(f"Label: {label_names[np.where(label.numpy()[0]==1)[0][0]]}")
+                print(f"Label: {label_names[np.where(label.numpy()[0] == 1)[0][0]]}")
         INPUT_DIM = example_train_batch.shape[1:]
         if (
             len(INPUT_DIM) == 1 or (INPUT_DIM[-1] == 1 and len(INPUT_DIM) == 2)
@@ -1031,7 +1061,7 @@ def example_batch(
             if label_names is not None:
                 plt.title(
                     "Audio wave plot of class: "
-                    + label_names[np.where(label.numpy()[0] == 1)[0][0]]
+                    + label_names[np.where(label.numpy()[0] == 1)[0][0]],
                 )
             else:
                 plt.title("Audio wave plot")
@@ -1041,7 +1071,7 @@ def example_batch(
             plt.colorbar()
             if label_names is not None:
                 plt.title(
-                    f"Spectrogram of class {label_names[np.where(label.numpy()[0]==1)[0][0]]}"
+                    f"Spectrogram of class {label_names[np.where(label.numpy()[0] == 1)[0][0]]}",
                 )
             else:
                 plt.title("Spectrogram")
@@ -1066,16 +1096,21 @@ def example_batch(
 def K_fold_training(
     dataset, build_model, params={}, K=5, epochs=2, verbose=2, patience=10, **kwargs
 ):
-
     callbacks_loss = [
         tf.keras.callbacks.EarlyStopping(
-            monitor="loss", mode="auto", verbose=verbose, patience=patience
-        )
+            monitor="loss",
+            mode="auto",
+            verbose=verbose,
+            patience=patience,
+        ),
     ]
     callback_acc = [
         tf.keras.callbacks.EarlyStopping(
-            monitor="accuracy", mode="auto", verbose=verbose, patience=patience
-        )
+            monitor="accuracy",
+            mode="auto",
+            verbose=verbose,
+            patience=patience,
+        ),
     ]
 
     # build the keras-sklearn regressor
@@ -1098,7 +1133,7 @@ def K_fold_training(
         return accuracy_score(y_true, y_pred)
 
     score = {
-        "one_hot_accuracy": make_scorer(my_custom_loss_func, greater_is_better=True)
+        "one_hot_accuracy": make_scorer(my_custom_loss_func, greater_is_better=True),
     }
 
     grid_search = GridSearchCV(
@@ -1120,8 +1155,9 @@ def K_fold_training(
     model_cv = grid_search.fit(X, y)
     result = pd.DataFrame(
         pd.DataFrame(
-            model_cv.cv_results_, index=model_cv.cv_results_["params"]
-        ).mean_test_one_hot_accuracy
+            model_cv.cv_results_,
+            index=model_cv.cv_results_["params"],
+        ).mean_test_one_hot_accuracy,
     )
     result.columns = ["mean_accuracy"]
     best_params = result.index[np.argmax(result.mean_accuracy)]
@@ -1154,7 +1190,6 @@ def compile_and_fit(
     verbose=1,
     model_filename=None,
 ):
-
     if verbose > 0:
         model.summary()
 
@@ -1175,7 +1210,7 @@ def compile_and_fit(
                 verbose=verbose,
                 restore_best_weights=True,
                 patience=patience,
-            )
+            ),
         ]
 
     history = model.fit(
@@ -1271,7 +1306,9 @@ def compile_fit_evaluate(
                 model.save_weights(path_to_save, save_format=save_format)
             else:
                 model.save(
-                    path_to_save, save_format=save_format, save_best_only=save_best_only
+                    path_to_save,
+                    save_format=save_format,
+                    save_best_only=save_best_only,
                 )
 
     if show_confusion_matrix:
@@ -1395,7 +1432,12 @@ def num(i):
 
 # since we are going to use this several times we define a practical function
 def create_US_dataset(
-    preprocessing, folder_number, main_dir, batch_size=128, ndim=3, verbose=0
+    preprocessing,
+    folder_number,
+    main_dir,
+    batch_size=128,
+    ndim=3,
+    verbose=0,
 ):
     # create a dataset of spectrograms from the ESC-US dataset folder 1, resized
     path_to_ogg_files = os.path.join(main_dir, "Data", "ESC-US", num(folder_number))
@@ -1450,7 +1492,7 @@ def create_US_dataset(
 
     if verbose > 0:
         print(
-            f"Create the dataset with {num_files} files requires {round(time.time()-start_time,2)} seconds."
+            f"Create the dataset with {num_files} files requires {round(time.time() - start_time, 2)} seconds.",
         )
 
     return train, val, test, INPUT_DIM
@@ -1471,7 +1513,6 @@ def US_training(
     ndim=3,
     metrics=["mse"],
 ):
-
     # paramteres for the fit and callbacks
     callbacks = [
         tf.keras.callbacks.EarlyStopping(
@@ -1480,12 +1521,13 @@ def US_training(
             verbose=verbose,
             restore_best_weights=True,
             patience=patience,
-        )
+        ),
     ]
 
     # read the file txt to know the folder to start
     with open(
-        os.path.join(main_dir, "Saved_Models", AE_name + "_count.txt"), "r"
+        os.path.join(main_dir, "Saved_Models", AE_name + "_count.txt"),
+        "r",
     ) as file:
         last_folder = int(file.read())
         print(f"Last folder trained: {last_folder}")
@@ -1495,11 +1537,10 @@ def US_training(
         n_folders = last_folder
 
     for i in range(last_folder + 1, n_folders + 1):
-
         # load the model if i > 1
         if i > 1:
             autoencoder = tf.keras.models.load_model(
-                os.path.join(main_dir, "Saved_Models", AE_name)
+                os.path.join(main_dir, "Saved_Models", AE_name),
             )
 
         # create the dataset
@@ -1512,12 +1553,17 @@ def US_training(
 
         # fit the autoencoder
         history = autoencoder.fit(
-            train, validation_data=val, epochs=epochs, callbacks=callbacks, verbose=0
+            train,
+            validation_data=val,
+            epochs=epochs,
+            callbacks=callbacks,
+            verbose=0,
         )
 
         # save the model
         autoencoder.save(
-            os.path.join(main_dir, "Saved_Models", AE_name), save_format="keras"
+            os.path.join(main_dir, "Saved_Models", AE_name),
+            save_format="keras",
         )
 
         # show the best epoch
@@ -1536,7 +1582,8 @@ def US_training(
 
         # update the number on the txt file overwritting the previous one
         with open(
-            os.path.join(main_dir, "Saved_Models", AE_name + "_count.txt"), "w"
+            os.path.join(main_dir, "Saved_Models", AE_name + "_count.txt"),
+            "w",
         ) as file:
             file.write(str(i))
 
@@ -1547,7 +1594,11 @@ def US_training(
 
 
 def create_masked_dataset(
-    dataset_path, batch_size=30, normalize=True, verbose=0, resize=True
+    dataset_path,
+    batch_size=30,
+    normalize=True,
+    verbose=0,
+    resize=True,
 ):
     # load the dataset
     dataset = tf.data.Dataset.load(dataset_path)
@@ -1577,7 +1628,7 @@ def create_masked_dataset(
             lambda x, y: (
                 tf.py_function(func=resize_images, inp=[x], Tout=tf.float32),
                 y,
-            )
+            ),
         )
 
     # create batches
@@ -1587,7 +1638,12 @@ def create_masked_dataset(
 
 
 def create_masked_dataset_AE(
-    dataset_path, batch_size=30, normalize=True, verbose=0, val_split=0.25, resize=True
+    dataset_path,
+    batch_size=30,
+    normalize=True,
+    verbose=0,
+    val_split=0.25,
+    resize=True,
 ):
     # load the dataset
     dataset = tf.data.Dataset.load(dataset_path)
@@ -1617,7 +1673,7 @@ def create_masked_dataset_AE(
             lambda x, y: (
                 tf.py_function(func=resize_images, inp=[x], Tout=tf.float32),
                 y,
-            )
+            ),
         )
 
     # map the first element of the train dataset over the second and overwrite it
@@ -1646,7 +1702,6 @@ def Masked_AE_training(
     ndim=3,
     metrics=["mse"],
 ):
-
     # paramteres for the fit and callbacks
     callbacks = [
         tf.keras.callbacks.EarlyStopping(
@@ -1655,12 +1710,13 @@ def Masked_AE_training(
             verbose=verbose,
             restore_best_weights=True,
             patience=patience,
-        )
+        ),
     ]
 
     # read the file txt to know the folder to start
     with open(
-        os.path.join(main_dir, "Saved_Models", AE_name + "_count.txt"), "r"
+        os.path.join(main_dir, "Saved_Models", AE_name + "_count.txt"),
+        "r",
     ) as file:
         last_folder = int(file.read())
         print(f"Last folder trained: {last_folder}")
@@ -1670,31 +1726,41 @@ def Masked_AE_training(
         n_folders = last_folder
 
     for i in range(last_folder + 1, n_folders + 1):
-
         # load the model if i > 1
         if i > 1:
             autoencoder = tf.keras.models.load_model(
-                os.path.join(main_dir, "Saved_Models", AE_name)
+                os.path.join(main_dir, "Saved_Models", AE_name),
             )
 
         # create the dataset
 
         dataset_path = os.path.join(
-            main_dir, "Saved_Datasets", "masked_dataset", num(i)
+            main_dir,
+            "Saved_Datasets",
+            "masked_dataset",
+            num(i),
         )
 
         train, val, test = create_masked_dataset_AE(
-            dataset_path, normalize=True, verbose=verbose, val_split=0.25
+            dataset_path,
+            normalize=True,
+            verbose=verbose,
+            val_split=0.25,
         )
 
         # fit the autoencoder
         history = autoencoder.fit(
-            train, validation_data=val, epochs=epochs, callbacks=callbacks, verbose=0
+            train,
+            validation_data=val,
+            epochs=epochs,
+            callbacks=callbacks,
+            verbose=0,
         )
 
         # save the model
         autoencoder.save(
-            os.path.join(main_dir, "Saved_Models", AE_name), save_format="keras"
+            os.path.join(main_dir, "Saved_Models", AE_name),
+            save_format="keras",
         )
 
         # show the best epoch
@@ -1713,7 +1779,8 @@ def Masked_AE_training(
 
         # update the number on the txt file overwritting the previous one
         with open(
-            os.path.join(main_dir, "Saved_Models", AE_name + "_count.txt"), "w"
+            os.path.join(main_dir, "Saved_Models", AE_name + "_count.txt"),
+            "w",
         ) as file:
             file.write(str(i))
 

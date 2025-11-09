@@ -29,10 +29,15 @@ from sklearn.utils import check_random_state
 
 
 def train_test(
-    X, y, test_size
+    X,
+    y,
+    test_size,
 ):  # nothing more than the sklearn train_test_split, just a shorter name
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=test_size, random_state=123
+        X,
+        y,
+        test_size=test_size,
+        random_state=123,
     )
     return X_train, X_test, y_train, y_test
 
@@ -43,7 +48,6 @@ def extract_flatten_MFCC(
     N_filters=50,  # number of filters in the mel filterbank
     transpose=False,  # we can flatten the mfcc matrix in two ways
 ):
-
     sample_rate = 44100
     segment = 20  # our default segments length in milliseconds
     overlapping = 10  # our defaut segments overlap in milliseconds
@@ -96,22 +100,23 @@ def build_dataset(df, subset=False, num_classes=10):
         for i, audio_path in enumerate(audio_paths):
             if (i + 1) % 400 == 0:
                 print(
-                    f"Loading the {i+1}-th labelled audio."
+                    f"Loading the {i + 1}-th labelled audio.",
                 )  # load the audio from the file path
             audio, _ = librosa.load(
-                audio_path, sr=44100
+                audio_path,
+                sr=44100,
             )  # Set sr=None to load the audio file with its original sampling rate
             X_ESC[i, :] = audio
         y_ESC = np.asarray(
-            df["target"]
+            df["target"],
         )  # assign the target to a numpy vector (NOT one hot encoding)
 
         # print some statiscs
         print(
-            f"To build the dataset we need {round(time.time()-start_time,2)} seconds seconds."
+            f"To build the dataset we need {round(time.time() - start_time, 2)} seconds seconds.",
         )
         print(
-            f"The Numpy Array of the dataset occupies {sys.getsizeof(X_ESC)/1000} kbytes"
+            f"The Numpy Array of the dataset occupies {sys.getsizeof(X_ESC) / 1000} kbytes",
         )
 
         # return also the labels for the confusion matrix
@@ -136,12 +141,12 @@ def build_dataset(df, subset=False, num_classes=10):
             audio, _ = librosa.load(audio_path, sr=44100)
             X_subset[i, :] = audio
         y_subset = np.asarray(
-            df_subset.target
+            df_subset.target,
         )  # assign the target to a numpy vector (NOT one hot encoding)
 
         # print some statiscs
         print(
-            f"Random dataset with {num_classes} classes built in {round(time.time()-start_time,2)} seconds seconds."
+            f"Random dataset with {num_classes} classes built in {round(time.time() - start_time, 2)} seconds seconds.",
         )
         print(f"Classes choosen: {set(df_subset.category)}")
         labels = extract_labels(df)
@@ -152,7 +157,8 @@ def build_dataset(df, subset=False, num_classes=10):
         audio_paths = df.full_path
         start_time = time.time()
         X_ESC_US = np.zeros(
-            (20000, 220500), dtype=np.float16
+            (20000, 220500),
+            dtype=np.float16,
         )  # we must decrease a lot the precision to fit in our RAM.
         for i, audio_path in enumerate(audio_paths):
             if i % 1000 == 0:
@@ -162,10 +168,10 @@ def build_dataset(df, subset=False, num_classes=10):
 
         # print some statistics
         print(
-            f"To build the ESC-US array we need {round(time.time()-start_time,2)} seconds seconds."
+            f"To build the ESC-US array we need {round(time.time() - start_time, 2)} seconds seconds.",
         )
         print(
-            f"The Numpy Array for ESC-US occupies {sys.getsizeof(X_ESC_US)/1000} kbytes"
+            f"The Numpy Array for ESC-US occupies {sys.getsizeof(X_ESC_US) / 1000} kbytes",
         )
         return X_ESC_US
 
@@ -184,10 +190,12 @@ def basic_ML_experiments_gridsearch(
     random_forest=True,
     KNN=True,
 ):
-
     # train test split
     X_train, X_test, y_train, y_test = train_test_split(
-        dataset, target, test_size=test_size, random_state=123
+        dataset,
+        target,
+        test_size=test_size,
+        random_state=123,
     )
 
     # initialization params for extract_flatten_MFCC(), changed in the grid search
@@ -280,25 +288,32 @@ def basic_ML_experiments_gridsearch(
     # auxiliary function to apply extract_flatten_MFCC() to each audio in the dataset
     def extract_mfcc(array, mfcc, n=n, transpose=transpose):
         my_func = lambda x: extract_flatten_MFCC(
-            audio=x, cepstral_num=mfcc, N_filters=n, transpose=transpose
+            audio=x,
+            cepstral_num=mfcc,
+            N_filters=n,
+            transpose=transpose,
         )
         return np.apply_along_axis(my_func, 1, array)
 
     # we need this function to to allow extract_mfcc to be used in the sklear GridSearch
     trans = FunctionTransformer(
-        func=extract_mfcc, kw_args={"mfcc": mfcc, "n": n, "transpose": transpose}
+        func=extract_mfcc,
+        kw_args={"mfcc": mfcc, "n": n, "transpose": transpose},
     )
 
     # run the models
     for model, param_grid in zip(models_to_test, params_to_test):
-
         # extract the model name
         name_model = str(model).split("(")[0]
         print(" " * 15 + name_model)
 
         # build the skelarn pipeline
         clf_pipe = Pipeline(
-            steps=[("MFCC", trans), ("Scaler", StandardScaler()), ("Classifier", model)]
+            steps=[
+                ("MFCC", trans),
+                ("Scaler", StandardScaler()),
+                ("Classifier", model),
+            ],
         )
 
         # set the verbosity
@@ -311,33 +326,33 @@ def basic_ML_experiments_gridsearch(
         clf = GridSearchCV(clf_pipe, param_grid, n_jobs=None, cv=cv, verbose=verb)
         clf.fit(X_train, y_train)
         print(
-            f"The grid search for the model {name_model} requires {round((time.time()-start_time)/60,2)} minutes."
+            f"The grid search for the model {name_model} requires {round((time.time() - start_time) / 60, 2)} minutes.",
         )
         print(f"Best params for model {name_model} are:{clf.best_params_}")
         y_predict_train = clf.predict(X_train)
         y_predict_test = clf.predict(X_test)
         print(
-            f"{name_model} Accuracy on {name_df} training set\t: {accuracy_score(y_train, y_predict_train)}"
+            f"{name_model} Accuracy on {name_df} training set\t: {accuracy_score(y_train, y_predict_train)}",
         )
         print(
-            f"{name_model} Accuracy on {name_df} test set\t: {accuracy_score(y_test, y_predict_test)}"
+            f"{name_model} Accuracy on {name_df} test set\t: {accuracy_score(y_test, y_predict_test)}",
         )
         with open(file, "a") as f:
             f.write("\n")
             f.write(name_model)
             f.write("\n")
             f.write(
-                f"The grid search for the model {name_model} requires {round((time.time()-start_time)/60,2)} minutes."
+                f"The grid search for the model {name_model} requires {round((time.time() - start_time) / 60, 2)} minutes.",
             )
             f.write("\n")
             f.write(f"Best params for model {name_model} are:{clf.best_params_}")
             f.write("\n")
             f.write(
-                f"{name_model} Accuracy on {name_df} training set\t: {accuracy_score(y_train, y_predict_train)}"
+                f"{name_model} Accuracy on {name_df} training set\t: {accuracy_score(y_train, y_predict_train)}",
             )
             f.write("\n")
             f.write(
-                f"{name_model} Accuracy on {name_df} test set\t: {accuracy_score(y_test, y_predict_test)}"
+                f"{name_model} Accuracy on {name_df} test set\t: {accuracy_score(y_test, y_predict_test)}",
             )
 
 
@@ -416,22 +431,24 @@ def basic_ML_experiments(
             start_time = time.time()
             clf = LogisticRegression(C=0.1, fit_intercept=False).fit(X_train, y_train)
             print(
-                f"Fit the logistic regression on the {name_df} dataset with raw audio requires {round(time.time()-start_time,2)} seconds"
+                f"Fit the logistic regression on the {name_df} dataset with raw audio requires {round(time.time() - start_time, 2)} seconds",
             )
 
             y_predict_train = clf.predict(X_train)
             y_predict_test = clf.predict(X_test)
-            result_df.loc["train accuracy", ("Logistic Regression", "raw audio")] = (
-                accuracy_score(y_train, y_predict_train)
-            )
-            result_df.loc["test accuracy", ("Logistic Regression", "raw audio")] = (
-                accuracy_score(y_test, y_predict_test)
+            result_df.loc[
+                "train accuracy",
+                ("Logistic Regression", "raw audio"),
+            ] = accuracy_score(y_train, y_predict_train)
+            result_df.loc[
+                "test accuracy",
+                ("Logistic Regression", "raw audio"),
+            ] = accuracy_score(y_test, y_predict_test)
+            print(
+                f"(Logistic Regression) Accuracy on {name_df} training set with raw audio. \t: {accuracy_score(y_train, y_predict_train)}",
             )
             print(
-                f"(Logistic Regression) Accuracy on {name_df} training set with raw audio. \t: {accuracy_score(y_train, y_predict_train)}"
-            )
-            print(
-                f"(Logistic Regression) Accuracy on {name_df} test set with raw audio.\t: {accuracy_score(y_test, y_predict_test)}"
+                f"(Logistic Regression) Accuracy on {name_df} test set with raw audio.\t: {accuracy_score(y_test, y_predict_test)}",
             )
             print("")
 
@@ -463,22 +480,24 @@ def basic_ML_experiments(
             )
             pipe.fit(X_train_mfcc, y_train)
             print(
-                f"Fit the logistic regression on the {name_df} dataset with 20-MFCC and 160 filters requires {round(time.time()-start_time,2)} seconds"
+                f"Fit the logistic regression on the {name_df} dataset with 20-MFCC and 160 filters requires {round(time.time() - start_time, 2)} seconds",
             )
 
             y_predict_train = pipe.predict(X_train_mfcc)
             y_predict_test = pipe.predict(X_test_mfcc)
-            result_df.loc["train accuracy", ("Logistic Regression", "MFCC")] = (
-                accuracy_score(y_train, y_predict_train)
-            )
-            result_df.loc["test accuracy", ("Logistic Regression", "MFCC")] = (
-                accuracy_score(y_test, y_predict_test)
+            result_df.loc[
+                "train accuracy",
+                ("Logistic Regression", "MFCC"),
+            ] = accuracy_score(y_train, y_predict_train)
+            result_df.loc[
+                "test accuracy",
+                ("Logistic Regression", "MFCC"),
+            ] = accuracy_score(y_test, y_predict_test)
+            print(
+                f"(Logistic Regression) Accuracy on {name_df} training set with {mfcc}-MFCC and {n} filters. \t: {accuracy_score(y_train, y_predict_train)}",
             )
             print(
-                f"(Logistic Regression) Accuracy on {name_df} training set with {mfcc}-MFCC and {n} filters. \t: {accuracy_score(y_train, y_predict_train)}"
-            )
-            print(
-                f"(Logistic Regression) Accuracy on {name_df} test set with {mfcc}-MFCC and {n} filters.\t: {accuracy_score(y_test, y_predict_test)}"
+                f"(Logistic Regression) Accuracy on {name_df} test set with {mfcc}-MFCC and {n} filters.\t: {accuracy_score(y_test, y_predict_test)}",
             )
             print("")
 
@@ -511,22 +530,24 @@ def basic_ML_experiments(
             clf = SVC(C=100, kernel="rbf", random_state=123)
             clf.fit(X_train_mfcc, y_train)
             print(
-                f"Fit the SVM on the {name_df} dataset with {mfcc}-MFCC and {n} filters requires {round(time.time()-start_time,2)} seconds"
+                f"Fit the SVM on the {name_df} dataset with {mfcc}-MFCC and {n} filters requires {round(time.time() - start_time, 2)} seconds",
             )
 
             y_predict_train = clf.predict(X_train_mfcc)
             y_predict_test = clf.predict(X_test_mfcc)
             result_df.loc["train accuracy", ("SVM", "MFCC")] = accuracy_score(
-                y_train, y_predict_train
+                y_train,
+                y_predict_train,
             )
             result_df.loc["test accuracy", ("SVM", "MFCC")] = accuracy_score(
-                y_test, y_predict_test
+                y_test,
+                y_predict_test,
             )
             print(
-                f"(SVM) Accuracy on {name_df} training set with {mfcc} MFCC and {n} filters. \t: {accuracy_score(y_train, y_predict_train)}"
+                f"(SVM) Accuracy on {name_df} training set with {mfcc} MFCC and {n} filters. \t: {accuracy_score(y_train, y_predict_train)}",
             )
             print(
-                f"(SVM) Accuracy on {name_df} test set with {mfcc} MFCC and {n} filters.\t: {accuracy_score(y_test, y_predict_test)}"
+                f"(SVM) Accuracy on {name_df} test set with {mfcc} MFCC and {n} filters.\t: {accuracy_score(y_test, y_predict_test)}",
             )
             print("")
 
@@ -542,31 +563,35 @@ def basic_ML_experiments(
 
             start_time = time.time()
             clf = DecisionTreeClassifier(
-                max_depth=10, min_samples_leaf=1, min_samples_split=20, random_state=123
+                max_depth=10,
+                min_samples_leaf=1,
+                min_samples_split=20,
+                random_state=123,
             )
             clf.fit(X_train, y_train)
             print(
-                f"Fit the Decision Tree on the {name_df} dataset with raw audio requires {round(time.time()-start_time,2)} seconds"
+                f"Fit the Decision Tree on the {name_df} dataset with raw audio requires {round(time.time() - start_time, 2)} seconds",
             )
 
             y_predict_train = clf.predict(X_train)
             y_predict_test = clf.predict(X_test)
-            result_df.loc["train accuracy", ("Decision Tree", "raw audio")] = (
-                accuracy_score(y_train, y_predict_train)
-            )
-            result_df.loc["test accuracy", ("Decision Tree", "raw audio")] = (
-                accuracy_score(y_test, y_predict_test)
+            result_df.loc[
+                "train accuracy",
+                ("Decision Tree", "raw audio"),
+            ] = accuracy_score(y_train, y_predict_train)
+            result_df.loc[
+                "test accuracy",
+                ("Decision Tree", "raw audio"),
+            ] = accuracy_score(y_test, y_predict_test)
+            print(
+                f"(Decision Tree) Accuracy on {name_df} training set with raw audio. \t: {accuracy_score(y_train, y_predict_train)}",
             )
             print(
-                f"(Decision Tree) Accuracy on {name_df} training set with raw audio. \t: {accuracy_score(y_train, y_predict_train)}"
-            )
-            print(
-                f"(Decision Tree) Accuracy on {name_df} test set with raw audio.\t: {accuracy_score(y_test, y_predict_test)}"
+                f"(Decision Tree) Accuracy on {name_df} test set with raw audio.\t: {accuracy_score(y_test, y_predict_test)}",
             )
             print("")
 
         if MFCC:
-
             """The grid search over the parameters { 'max_depth': [5,10,50,None], 'min_samples_split': [2,8,20],'min_samples_leaf': [1,4,8]
             ,cepstral_num : [10,20,30,40,50], N_filters:[40,80,120,160] } gives as result that the best params are
             {'max_depth': 10, 'min_samples_leaf': 1, 'min_samples_split': 2, cepstral_num = 10, N_filters = 120}
@@ -587,26 +612,31 @@ def basic_ML_experiments(
             )
             start_time = time.time()
             clf = DecisionTreeClassifier(
-                max_depth=10, min_samples_leaf=1, min_samples_split=2, random_state=123
+                max_depth=10,
+                min_samples_leaf=1,
+                min_samples_split=2,
+                random_state=123,
             )
             clf.fit(X_train_mfcc, y_train)
             print(
-                f"Fit the Decision Tree on the {name_df} dataset with {mfcc}-MFCC and {n} filters requires {round(time.time()-start_time,2)} seconds"
+                f"Fit the Decision Tree on the {name_df} dataset with {mfcc}-MFCC and {n} filters requires {round(time.time() - start_time, 2)} seconds",
             )
 
             y_predict_train = clf.predict(X_train_mfcc)
             y_predict_test = clf.predict(X_test_mfcc)
             result_df.loc["train accuracy", ("Decision Tree", "MFCC")] = accuracy_score(
-                y_train, y_predict_train
+                y_train,
+                y_predict_train,
             )
             result_df.loc["test accuracy", ("Decision Tree", "MFCC")] = accuracy_score(
-                y_test, y_predict_test
+                y_test,
+                y_predict_test,
             )
             print(
-                f"(Decision Tree) Accuracy on {name_df} training set with {mfcc} MFCC and {n} filters. \t: {accuracy_score(y_train, y_predict_train)}"
+                f"(Decision Tree) Accuracy on {name_df} training set with {mfcc} MFCC and {n} filters. \t: {accuracy_score(y_train, y_predict_train)}",
             )
             print(
-                f"(Decision Tree) Accuracy on {name_df} test set with {mfcc} MFCC and {n} filters.\t: {accuracy_score(y_test, y_predict_test)}"
+                f"(Decision Tree) Accuracy on {name_df} test set with {mfcc} MFCC and {n} filters.\t: {accuracy_score(y_test, y_predict_test)}",
             )
             print("")
 
@@ -631,22 +661,24 @@ def basic_ML_experiments(
             )
             clf.fit(X_train, y_train)
             print(
-                f"Fit the Random Forest on the {name_df} dataset with raw audio requires {round(time.time()-start_time,2)} seconds seconds"
+                f"Fit the Random Forest on the {name_df} dataset with raw audio requires {round(time.time() - start_time, 2)} seconds seconds",
             )
 
             y_predict_train = clf.predict(X_train)
             y_predict_test = clf.predict(X_test)
-            result_df.loc["train accuracy", ("Random Forest", "raw audio")] = (
-                accuracy_score(y_train, y_predict_train)
-            )
-            result_df.loc["test accuracy", ("Random Forest", "raw audio")] = (
-                accuracy_score(y_test, y_predict_test)
+            result_df.loc[
+                "train accuracy",
+                ("Random Forest", "raw audio"),
+            ] = accuracy_score(y_train, y_predict_train)
+            result_df.loc[
+                "test accuracy",
+                ("Random Forest", "raw audio"),
+            ] = accuracy_score(y_test, y_predict_test)
+            print(
+                f"(Random Forest) Accuracy on {name_df} training set with raw audio. \t: {accuracy_score(y_train, y_predict_train)}",
             )
             print(
-                f"(Random Forest) Accuracy on {name_df} training set with raw audio. \t: {accuracy_score(y_train, y_predict_train)}"
-            )
-            print(
-                f"(Random Forest) Accuracy on {name_df} test set with raw audio.\t: {accuracy_score(y_test, y_predict_test)}"
+                f"(Random Forest) Accuracy on {name_df} test set with raw audio.\t: {accuracy_score(y_test, y_predict_test)}",
             )
             print("")
 
@@ -682,22 +714,24 @@ def basic_ML_experiments(
             )
             clf.fit(X_train_mfcc, y_train)
             print(
-                f"Fit the Random Forest on the {name_df} dataset with {mfcc}-MFCC and {n} filters requires {round(time.time()-start_time,2)} seconds seconds"
+                f"Fit the Random Forest on the {name_df} dataset with {mfcc}-MFCC and {n} filters requires {round(time.time() - start_time, 2)} seconds seconds",
             )
 
             y_predict_train = clf.predict(X_train_mfcc)
             y_predict_test = clf.predict(X_test_mfcc)
             result_df.loc["train accuracy", ("Random Forest", "MFCC")] = accuracy_score(
-                y_train, y_predict_train
+                y_train,
+                y_predict_train,
             )
             result_df.loc["test accuracy", ("Random Forest", "MFCC")] = accuracy_score(
-                y_test, y_predict_test
+                y_test,
+                y_predict_test,
             )
             print(
-                f"(Random Forest) Accuracy on {name_df} training set with {mfcc} MFCC and {n} filters. \t: {accuracy_score(y_train, y_predict_train)}"
+                f"(Random Forest) Accuracy on {name_df} training set with {mfcc} MFCC and {n} filters. \t: {accuracy_score(y_train, y_predict_train)}",
             )
             print(
-                f"(Random Forest) Accuracy on {name_df} test set with {mfcc} MFCC and {n} filters.\t: {accuracy_score(y_test, y_predict_test)}"
+                f"(Random Forest) Accuracy on {name_df} test set with {mfcc} MFCC and {n} filters.\t: {accuracy_score(y_test, y_predict_test)}",
             )
             print("")
 
@@ -714,22 +748,24 @@ def basic_ML_experiments(
             clf = KNeighborsClassifier(n_neighbors=32, p=1, weights="uniform")
             clf.fit(X_train, y_train)
             print(
-                f"Fit the KNN on the {name_df} dataset with raw audio requires {round(time.time()-start_time,2)} seconds"
+                f"Fit the KNN on the {name_df} dataset with raw audio requires {round(time.time() - start_time, 2)} seconds",
             )
 
             y_predict_train = clf.predict(X_train)
             y_predict_test = clf.predict(X_test)
             result_df.loc["train accuracy", ("KNN", "raw audio")] = accuracy_score(
-                y_train, y_predict_train
+                y_train,
+                y_predict_train,
             )
             result_df.loc["test accuracy", ("KNN", "raw audio")] = accuracy_score(
-                y_test, y_predict_test
+                y_test,
+                y_predict_test,
             )
             print(
-                f"(KNN) Accuracy on {name_df} training set with raw audio. \t: {accuracy_score(y_train, y_predict_train)}"
+                f"(KNN) Accuracy on {name_df} training set with raw audio. \t: {accuracy_score(y_train, y_predict_train)}",
             )
             print(
-                f"(KNN) Accuracy on {name_df} test set with raw audio.\t: {accuracy_score(y_test, y_predict_test)}"
+                f"(KNN) Accuracy on {name_df} test set with raw audio.\t: {accuracy_score(y_test, y_predict_test)}",
             )
             print("")
 
@@ -758,27 +794,29 @@ def basic_ML_experiments(
             clf = KNeighborsClassifier(n_neighbors=8, p=1, weights="distance")
             clf.fit(X_train_mfcc, y_train)
             print(
-                f"Fit the KNN on the {name_df} dataset with {mfcc}-MFCC and {n} filters requires {round(time.time()-start_time,2)} seconds"
+                f"Fit the KNN on the {name_df} dataset with {mfcc}-MFCC and {n} filters requires {round(time.time() - start_time, 2)} seconds",
             )
 
             y_predict_train = clf.predict(X_train_mfcc)
             y_predict_test = clf.predict(X_test_mfcc)
             result_df.loc["train accuracy", ("KNN", "MFCC")] = accuracy_score(
-                y_train, y_predict_train
+                y_train,
+                y_predict_train,
             )
             result_df.loc["test accuracy", ("KNN", "MFCC")] = accuracy_score(
-                y_test, y_predict_test
+                y_test,
+                y_predict_test,
             )
             print(
-                f"(KNN) Accuracy on {name_df} training set with {mfcc} MFCC and {n} filters. \t: {accuracy_score(y_train, y_predict_train)}"
+                f"(KNN) Accuracy on {name_df} training set with {mfcc} MFCC and {n} filters. \t: {accuracy_score(y_train, y_predict_train)}",
             )
             print(
-                f"(KNN) Accuracy on {name_df} test set with {mfcc} MFCC and {n} filters.\t: {accuracy_score(y_test, y_predict_test)}"
+                f"(KNN) Accuracy on {name_df} test set with {mfcc} MFCC and {n} filters.\t: {accuracy_score(y_test, y_predict_test)}",
             )
             print("")
 
     print(
-        f"The full basic machine learning experimentation requires {round((time.time()-main_time)/60,2)} minutes."
+        f"The full basic machine learning experimentation requires {round((time.time() - main_time) / 60, 2)} minutes.",
     )
     return result_df
 
