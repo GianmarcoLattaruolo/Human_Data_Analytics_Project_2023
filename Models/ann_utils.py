@@ -17,11 +17,18 @@ import tensorflow as tf
 importlib.reload(importlib.import_module("Visualization.model_plot"))
 import keras_tuner as kt
 from scikeras.wrappers import KerasClassifier
-from sklearn.metrics import (PrecisionRecallDisplay, RocCurveDisplay,
-                             accuracy_score, auc, make_scorer,
-                             precision_recall_curve,
-                             precision_recall_fscore_support, precision_score,
-                             recall_score, roc_curve)
+from sklearn.metrics import (
+    PrecisionRecallDisplay,
+    RocCurveDisplay,
+    accuracy_score,
+    auc,
+    make_scorer,
+    precision_recall_curve,
+    precision_recall_fscore_support,
+    precision_score,
+    recall_score,
+    roc_curve,
+)
 from sklearn.model_selection import GridSearchCV
 from keras.models import save_model  # from labs
 
