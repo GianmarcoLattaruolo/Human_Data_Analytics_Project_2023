@@ -1,0 +1,12 @@
+[flake8]
+ignore =
+    # space after ':' - conflict with Black
+    E203,
+    # line break before binary operator - conflict with black
+    W503
+
+max-line-length = 120
+extend-ignore = E203
+per-file-ignores =
+    # imported but unused
+    __init__.py: F401
