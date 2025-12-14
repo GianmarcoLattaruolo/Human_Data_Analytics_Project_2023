@@ -1,0 +1,10 @@
+LICENSE
+README.md
+README.txt
+pyproject.toml
+hda/__init__.py
+hda.egg-info/PKG-INFO
+hda.egg-info/SOURCES.txt
+hda.egg-info/dependency_links.txt
+hda.egg-info/requires.txt
+hda.egg-info/top_level.txt

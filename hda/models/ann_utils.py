@@ -1,5 +1,4 @@
 # import all the required libraries
-import importlib
 import os
 import random
 import shutil
@@ -7,15 +6,13 @@ import sys
 import time
 
 import IPython.display as ipd
+import keras_tuner as kt
 import librosa
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import sklearn
 import tensorflow as tf
-
-importlib.reload(importlib.import_module("Visualization.model_plot"))
-import keras_tuner as kt
 from keras.models import save_model  # from labs
 from scikeras.wrappers import KerasClassifier
 from sklearn.metrics import (
@@ -31,7 +28,8 @@ from sklearn.metrics import (
     roc_curve,
 )
 from sklearn.model_selection import GridSearchCV
-from Visualization.model_plot import *
+
+from hda.visualization.model_plot import *
 
 
 # class from course laboratories
@@ -1178,11 +1176,7 @@ def compile_and_fit(
     train_data,
     val_data,
     loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True),
-    optimizer=(
-        tf.keras.optimizers.legacy.Adam(learning_rate=1e-3)
-        if sys.platform == "darwin"
-        else tf.keras.optimizers.Adam(learning_rate=1e-3)
-    ),
+    optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
     metrics=["accuracy"],
     patience=5,
     epochs=10,
@@ -1236,7 +1230,7 @@ def compile_fit_evaluate(
     model_path=None,
     loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True),
     optimizer=(
-        tf.keras.optimizers.legacy.Adam(learning_rate=1e-3)
+        tf.keras.optimizers.Adam(learning_rate=1e-3)
         if sys.platform == "darwin"
         else tf.keras.optimizers.Adam(learning_rate=1e-3)
     ),

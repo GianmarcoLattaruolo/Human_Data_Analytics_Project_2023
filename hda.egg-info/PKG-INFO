@@ -1,0 +1,22 @@
+Metadata-Version: 2.4
+Name: hda
+Version: 0.0.1
+Summary: Add your description here
+Author: Gianmarco Lattrauolo
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: keras-tuner>=1.4.7
+Requires-Dist: librosa>=0.11.0
+Requires-Dist: numpy>=2.3.4
+Requires-Dist: pandas>=2.3.3
+Requires-Dist: plotly>=6.5.0
+Requires-Dist: scikeras>=0.13.0
+Requires-Dist: scikit-learn>=1.7.2
+Requires-Dist: seaborn>=0.13.2
+Requires-Dist: tensorflow>=2.20.0
+Dynamic: license-file
+
+# Human_Data_Analytics_Project_2023
+
+Read the readme.txt file for repo structure.
