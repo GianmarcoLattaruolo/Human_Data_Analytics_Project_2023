@@ -23,8 +23,20 @@ def get_audio_files(data_dir: Path) -> list[Path]:
     return [audio for audio in data_dir.iterdir() if audio.suffix == ".wav"]
 
 
-def load_ESC50_meta():
-    df_ESC50 = pd.read_csv(paths.METADATA_DIR / "dataset_ESC50.csv")
+def load_ESC50_meta() -> pd.DataFrame:
+    df_ESC50 = pd.read_csv(paths.METADATA_DIR / "esc50.csv")
+    df_ESC50["full_path"] = df_ESC50["filename"].apply(lambda x: paths.ESC_50_DIR / x)
+    return df_ESC50
+
+
+def load_ESC10_meta() -> pd.DataFrame:
+    df_ESC50 = load_ESC50_meta()
+    return df_ESC50[df_ESC50["esc10"]]
+
+
+def build_target_mapping(df: pd.DataFrame) -> dict[int, str]:
+    couples = df[["target", "category"]].drop_duplicates()
+    return dict(couples.to_numpy())
 
 
 def load_metadata(
@@ -41,7 +53,7 @@ def load_metadata(
 
     if ESC50:
         df_ESC50 = pd.read_csv(file_path)
-        df_ESC50["full_path"] = df_ESC50.filename.apply(
+        df_ESC50["full_path"] = filename.apply(
             lambda x: os.path.join(esc_50_path, x),
         )
     if ESC10:
