@@ -1,4 +1,5 @@
 import glob
+import logging
 import os
 import random
 import shutil
@@ -7,24 +8,33 @@ import urllib
 import urllib.request
 import zipfile
 from collections import Counter
+from pathlib import Path
 
-import IPython.display
 import librosa
 import numpy as np
 import pandas as pd
 
+from hda import paths
+
+LOGGER = logging.getLogger(__file__)
+
+
+def get_audio_files(data_dir: Path) -> list[Path]:
+    return [audio for audio in data_dir.iterdir() if audio.suffix == ".wav"]
+
+
+def load_ESC50_meta():
+    df_ESC50 = pd.read_csv(paths.METADATA_DIR / "dataset_ESC50.csv")
+
 
 def load_metadata(
-    data_dir,
     heads=True,
     statistics=False,
-    audio_listen=False,
     ESC50=True,
     ESC10=True,
     ESC_US=False,
 ):
-    dir_path = os.path.join(data_dir, "datasets", "ESC-50")
-    audio_files = [os.path.join(dir_path, i) for i in os.listdir(dir_path)]
+    esc_50_files = get_audio_files(paths.ESC_50_DIR)
 
     # load and explore the metadata
     file_path = os.path.join(data_dir, "Data", "meta", "esc50.csv")
@@ -32,18 +42,17 @@ def load_metadata(
     if ESC50:
         df_ESC50 = pd.read_csv(file_path)
         df_ESC50["full_path"] = df_ESC50.filename.apply(
-            lambda x: os.path.join(dir_path, x),
+            lambda x: os.path.join(esc_50_path, x),
         )
     if ESC10:
         if not ESC50:
             df_ESC50 = pd.read_csv(file_path)
         df_ESC50["full_path"] = df_ESC50.filename.apply(
-            lambda x: os.path.join(dir_path, x),
+            lambda x: os.path.join(esc_50_path, x),
         )
         df_ESC10 = df_ESC50[df_ESC50.esc10].drop("esc10", axis=1)
 
     if heads:
-        display(df_ESC50.head())
         print(
             "Classes in the full dataset  are perfectly balanced\n",
             Counter(df_ESC50.category),
@@ -52,7 +61,6 @@ def load_metadata(
         # 'target' is a number representing the audio type
         # category of the reduced dataset ESC-10
 
-        display(df_ESC10.head())
         classes_esc10 = list(set(df_ESC10.category))
         print("Classes in ESC10 \n", classes_esc10)
 
@@ -60,11 +68,11 @@ def load_metadata(
         # auxiliary objects
         sample_rates = set()
         clip_length = set()
-        stat_list = np.zeros((len(audio_files), 4))
+        stat_list = np.zeros((len(esc_50_files), 4))
 
         # let's have a look also over the copmuting time
         start_time = time.time()
-        for i, clip in enumerate(audio_files):
+        for i, clip in enumerate(esc_50_files):
             data, samplerate = librosa.load(clip, sr=44100)
             # samplerate, data = wavfile.read(clip)
             sample_rates.add(samplerate)
@@ -78,16 +86,6 @@ def load_metadata(
         print(f"librosa takes : {time.time() - start_time}")
         print(f"the lengths are {clip_length}")
         print(f"the sample rates are {sample_rates}")
-
-    if audio_listen:
-        if not ESC10:
-            ESC10 = load_metadata(data_dir, ESC10=True, ESC50=False)
-        # let's listen to one sample for each esc10 classes
-        for audio_type in classes_esc10:
-            clip = list(df_ESC10.full_path[df_ESC10.category == audio_type])[0]
-            data, samplerate = librosa.load(clip, sr=44100)
-            print(audio_type)
-            display(IPython.display.Audio(data=data, rate=samplerate))
 
     if ESC_US:
         file_path = os.path.join(
@@ -112,7 +110,6 @@ def load_metadata(
             df_ESC_US = pd.concat([df_ESC_US, d])
         if heads:
             print(f"We have {np.max(np.shape(df_ESC_US))} unlabeled audios.")
-            display(df_ESC_US.head())
 
     if ESC50 and not ESC10 and not ESC_US:
         return df_ESC50
