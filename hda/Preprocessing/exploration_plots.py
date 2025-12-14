@@ -1,4 +1,5 @@
 # libraries
+import logging
 import os
 import random
 
@@ -6,6 +7,7 @@ import IPython.display
 import librosa
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 from IPython import display
 from scipy import signal
@@ -17,19 +19,20 @@ from hda import paths
 from hda.constants import SAMPLE_RATE
 from hda.preprocessing import data_loader
 
+LOGGER = logging.getLogger(__file__)
+
 
 def plot_clip_overview(
-    df,
-    sample_rate=44100,
-    segment=25,
-    overlapping=10,
-    column=5,
-    preprocessing="STFT",
-):
+    df: pd.DataFrame,
+    segment: int = 25,
+    overlapping: int = 10,
+    column: int = 5,
+    preprocessing: str = "STFT",
+) -> None:
     segment_samples = round(
-        sample_rate * segment / 1000,
+        SAMPLE_RATE * segment / 1000,
     )  # Calculate the number of samples per segment
-    overlap_samples = round(sample_rate * overlapping / 1000)
+    overlap_samples = round(SAMPLE_RATE * overlapping / 1000)
 
     categories = list(set(df.category))
     row = len(categories)
@@ -75,7 +78,7 @@ def plot_clip_overview(
                     y=data,
                     win_length=segment_samples,
                     hop_length=overlap_samples,
-                    sr=sample_rate,
+                    sr=SAMPLE_RATE,
                 )
                 M_db = librosa.power_to_db(D, ref=np.max)
 
@@ -88,27 +91,26 @@ def plot_clip_overview(
 
 
 def Spectral_Analysis(
-    audio,
-    sample_rate=44100,
-    segment=20,
-    n_fft=None,  # padd the frames with zeros before DFT
-    overlapping=10,
-    cepstral_num=40,  # number of mel frequencies cepstral coefficients
-    N_filters=50,  # number of mel filters in frequency domain
-    plot=False,
-    verbose=False,
-    STFT_decibel=False,
-    Mel_spectrogram_decibel=False,
-    MFCC=True,
+    audio: npt.NDArray[np.float32],
+    segment: int = 20,
+    n_fft: int | None = None,  # padd the frames with zeros before DFT
+    overlapping: int = 10,
+    cepstral_num: int = 40,  # number of mel frequencies cepstral coefficients
+    N_filters: int = 50,  # number of mel filters in frequency domain
+    plot: bool = False,
+    verbose: bool = False,
+    STFT_decibel: bool = False,
+    Mel_spectrogram_decibel: bool = False,
+    MFCC: bool = True,
 ):
     if n_fft == None:
         n_fft = segment
     nperseg = round(
-        sample_rate * segment / 1000,
+        SAMPLE_RATE * segment / 1000,
     )  # Calculate the number of samples per segment win_length = nperseg
     print(f"A segment of {segment} ms has {nperseg} samples")
-    noverlap = round(sample_rate * overlapping / 1000)
-    n_fft = round(sample_rate * n_fft / 1000)
+    noverlap = round(SAMPLE_RATE * overlapping / 1000)
+    n_fft = round(SAMPLE_RATE * n_fft / 1000)
     hop_length = nperseg - noverlap
 
     # SCIPY
@@ -117,7 +119,7 @@ def Spectral_Analysis(
     freq_scipy_periodogram, y_norm = periodogram(audio)
     freq_scipy, time_scipy, stft_scipy = stft(
         audio,
-        fs=sample_rate,
+        fs=SAMPLE_RATE,
         window="hann",
         nperseg=nperseg,
         noverlap=noverlap,
@@ -125,7 +127,7 @@ def Spectral_Analysis(
     )
     f, t, spec_y = spectrogram(
         audio,
-        fs=sample_rate,
+        fs=SAMPLE_RATE,
         nperseg=nperseg,
         noverlap=noverlap,
     )
@@ -133,7 +135,7 @@ def Spectral_Analysis(
     # LIBROSA
 
     frequencies = librosa.fft_frequencies(
-        sr=sample_rate,
+        sr=SAMPLE_RATE,
         n_fft=audio.shape[0],
     )  # non so cosa sia
     stft_librosa = librosa.stft(
@@ -150,17 +152,17 @@ def Spectral_Analysis(
     time_librosa = librosa.frames_to_time(
         [i for i in range(stft_librosa.shape[1])],
         hop_length=hop_length,
-        sr=sample_rate,
+        sr=SAMPLE_RATE,
         n_fft=n_fft,
     )
-    freq_librosa = librosa.fft_frequencies(sr=sample_rate, n_fft=n_fft)
+    freq_librosa = librosa.fft_frequencies(sr=SAMPLE_RATE, n_fft=n_fft)
     S_db = librosa.amplitude_to_db(np.abs(stft_librosa), ref=np.max)
 
     # librosa other types of spectral data
 
     mel_y = librosa.feature.melspectrogram(
         y=audio,
-        sr=sample_rate,
+        sr=SAMPLE_RATE,
         n_fft=n_fft,
         hop_length=hop_length,
         win_length=nperseg,
@@ -173,7 +175,7 @@ def Spectral_Analysis(
     # mel frequency cepstral coefficients
     mfcc_y = librosa.feature.mfcc(
         y=audio,
-        sr=sample_rate,
+        sr=SAMPLE_RATE,
         n_mfcc=cepstral_num,
         n_fft=n_fft,
         hop_length=hop_length,
@@ -204,7 +206,7 @@ def Spectral_Analysis(
         except:
             pass
         print(
-            f"Librosa fft_frequencies has shape {freq_librosa.shape} (compute the frequencies given the sample_rate and the windowed length)",
+            f"Librosa fft_frequencies has shape {freq_librosa.shape} (compute the frequencies given the SAMPLE_RATE and the windowed length)",
         )
         print(f"Is it equal to Scipy frequencies? {(freq_librosa == freq_scipy).all()}")
         print("\n")
@@ -274,7 +276,7 @@ def Spectral_Analysis(
         plt.imshow(mel_y)
         plt.colorbar(format="%+2.f dB")
         plt.title(
-            f"Librosa Mel spectrogram: Input {audio.shape, sample_rate, nperseg, hop_length} > Output {mel_y.shape}",
+            f"Librosa Mel spectrogram: Input {audio.shape, SAMPLE_RATE, nperseg, hop_length} > Output {mel_y.shape}",
         )
 
         plt.subplot(11, 1, 9)
